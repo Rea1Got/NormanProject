@@ -1,26 +1,25 @@
 #include "molecule.hpp"
 #include <iostream>
 
-void Molecule::get_id() { std::cout << "Id: " << id << std::endl; }
+void Molecule::print_id() { std::cout << "Id: " << id << std::endl; }
 
-void Molecule::get_coordinate() {
-  std::cout << "Coordinates { x: " << coordinate[0] << "; y: " << coordinate[1]
-            << "; z: " << coordinate[2] << " }" << std::endl;
+void Molecule::print_coordinate() {
+  std::cout << "Coordinates { " << coordinate[0] << "; " << coordinate[1]
+            << "; " << coordinate[2] << " }" << std::endl;
 }
-void Molecule::get_velocity() {
-  std::cout << "Velocity { v_x: " << velocity[0] << "; v_y: " << velocity[1]
-            << "; v_z: " << velocity[2] << " }" << std::endl;
+void Molecule::print_velocity() {
+  std::cout << "Velocity { " << velocity[0] << "; " << velocity[1] << "; "
+            << velocity[2] << " }" << std::endl;
 }
-void Molecule::get_acceleration() {
-  std::cout << "Acceleration { a_x: " << acceleration[0]
-            << "; a_y: " << acceleration[1] << "; a_z: " << acceleration[2]
-            << " }" << std::endl;
+void Molecule::print_acceleration() {
+  std::cout << "Acceleration { " << acceleration[0] << "; " << acceleration[1]
+            << "; " << acceleration[2] << " }" << std::endl;
 }
 
-void Molecule::get_full_information() {
-  get_id();
-  get_coordinate();
-  get_velocity();
-  get_acceleration();
+void Molecule::print_full_information() {
+  print_id();
+  print_coordinate();
+  print_velocity();
+  print_acceleration();
   std::cout << std::endl;
 }
