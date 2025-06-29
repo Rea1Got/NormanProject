@@ -18,9 +18,7 @@ private:
     }
   }
 
-public:
-  Volume(double x, float y, float z, std::vector<Molecule> &init_molecules)
-      : length_x(x), length_y(y), length_z(z), space(init_molecules) {
+  void border_periodic() {
     for (int i = 0; i < space.get_amount_of_molecules(); i++) {
       auto &current_molecule = space.get_molecule(i); // border-periodic
       std::array<double, 3> coord = current_molecule.get_coordinate();
@@ -31,10 +29,22 @@ public:
     }
   }
 
-  void change_volume(double x, float y, float z) {
+public:
+  Volume(int number_of_molecules, int seed, double MAX_VELOCITY = 1.0,
+         double x = 1.0, double y = 1.0, double z = 1.0)
+      : length_x(x), length_y(y), length_z(z),
+        space(number_of_molecules, seed, MAX_VELOCITY) {
+    border_periodic();
+  }
+
+  Volume(Space &space, double x = 1.0, double y = 1.0, double z = 1.0)
+      : length_x(x), length_y(y), length_z(z), space(space) {}
+
+  void set_volume(double x, float y, float z) {
     length_x = x;
     length_y = y;
     length_z = z;
+    border_periodic();
   }
 
   void print_volume_specs() {
