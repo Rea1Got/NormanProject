@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -g -Isrc -Itests  
 
-SOURCES = src/*.cpp main.cpp
+SOURCES = src/*.cpp src/*.hpp main.cpp
 EXECUTABLE = ./build/main
 
 all: $(EXECUTABLE)
