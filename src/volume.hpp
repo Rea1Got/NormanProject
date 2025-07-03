@@ -14,6 +14,7 @@ private:
   double sigma = 1;
   double sigma_6 = 1;
   double sigma_12 = 1;
+  double energy_c = 1;
   Space space;
 
   void adjust_coordinate(double &coord, float length) {
@@ -82,17 +83,18 @@ public:
     sigma_6 = std::pow(sigma, 6);
     sigma_12 = sigma_6 * sigma_6;
     radius_cut_abs = radius_cut_in_sigma * sigma;
+    energy_c = potential_energy(std::pow(radius_cut_abs, -2));
 
     init_cubic_grid();
     init_velocity(seed);
     border_periodic();
+
     space.remove_total_momentum(temperature);
   }
 
-  Volume(Space &space, double temperature = 1.0, double x = 1.0, double y = 1.0,
-         double z = 1.0)
-      : length_x(x), length_y(y), length_z(z), space(space) {
-    space.remove_total_momentum(temperature);
+  double potential_energy(double r2inv) {
+    double r6inv = r2inv * r2inv * r2inv;
+    return 4 * epsilon * r6inv * (sigma_12 * r6inv - sigma_6);
   }
 
   double lennard_jones(double r2) {
@@ -108,9 +110,10 @@ public:
   }
 
   std::vector<std::array<double, 3>> calculate_force() {
-    double radius_2 = 0;
-    double force_scalar = 0;
-    auto &space = get_space();
+    double radius_2 = 0.0;
+    double force_scalar = 0.0;
+    double pot_energy = 0.0;
+    Space &space = get_space();
     int number_of_molecules = space.get_amount_of_molecules();
     std::vector<std::array<double, 3>> force(number_of_molecules, {0, 0, 0});
 
@@ -126,14 +129,19 @@ public:
           dr[k] -= get_length(k) * std::round(dr[k] / get_length(k));
         }
         radius_2 = dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2];
-        force_scalar = lennard_jones(radius_2);
 
+        pot_energy += potential_energy(1.0 / radius_2) - energy_c;
+
+        force_scalar = lennard_jones(radius_2);
         for (int k = 0; k < 3; k++) {
           force[i][k] += force_scalar * dr[k];
           force[j][k] -= force_scalar * dr[k];
         }
       }
     }
+    //  bruh
+    //  need to separate calculation of dr[], calculation of forces and energy
+    force.push_back({pot_energy, 0.0, 0.0});
 
     return force;
   }

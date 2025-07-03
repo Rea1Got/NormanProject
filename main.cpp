@@ -13,15 +13,16 @@ int main() {
   Volume volume(number_of_molecules, seed, temperature, 2.5, 0.34,
                 120 * 1.34e-23);
 
+  std::vector<std::array<double, 3>> force;
+  force = volume.calculate_force();
   for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
     Molecule &mol = volume.get_space().get_molecule(i);
     mol.print_full_information();
-    std::vector<std::array<double, 3>> force(
-        volume.get_space().get_amount_of_molecules(), {0, 0, 0});
-    force = volume.calculate_force();
     std::cout << "Current force: " << force[i][0] << " " << force[i][1] << " "
               << force[i][2] << "\n\n";
   }
+  std::array<double, 3> pot_energy = force.back();
+  std::cout << "Pot_energy: " << pot_energy[0] << "\n";
 
   double v_sum = 0.0, v2_sum = 0.0;
   for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
