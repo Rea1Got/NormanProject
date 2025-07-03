@@ -10,16 +10,20 @@ int main() {
   std::cin >> number_of_molecules >> seed;
   double temperature = 0;
   std::cin >> temperature;
-  Volume volume(number_of_molecules, seed, temperature);
+  Volume volume(number_of_molecules, seed, temperature, 2.5, 0.34,
+                120 * 1.34e-23);
 
   for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
     Molecule &mol = volume.get_space().get_molecule(i);
-    // std::cout << "Molecule " << mol.get_id() << ":" << std::endl;
-    // mol.print_full_information();
+    mol.print_full_information();
+    std::vector<std::array<double, 3>> force(
+        volume.get_space().get_amount_of_molecules(), {0, 0, 0});
+    force = volume.calculate_force();
+    std::cout << "Current force: " << force[i][0] << " " << force[i][1] << " "
+              << force[i][2] << "\n\n";
   }
 
   double v_sum = 0.0, v2_sum = 0.0;
-
   for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
     auto velocity = volume.get_space().get_molecule(i).get_velocity();
     for (int j = 0; j < 3; j++) {

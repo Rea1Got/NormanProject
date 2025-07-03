@@ -9,6 +9,11 @@ private:
   double length_x = 1;
   double length_y = 1;
   double length_z = 1;
+  double radius_cut_abs = 1;
+  double epsilon = 1;
+  double sigma = 1;
+  double sigma_6 = 1;
+  double sigma_12 = 1;
   Space space;
 
   void adjust_coordinate(double &coord, float length) {
@@ -70,8 +75,14 @@ private:
 
 public:
   Volume(int number_of_molecules, int seed, double temperature = 1.0,
-         double x = 1.0, double y = 1.0, double z = 1.0)
-      : length_x(x), length_y(y), length_z(z), space(number_of_molecules) {
+         double radius_cut_in_sigma = 1.0, double sigma = 1.0,
+         double epsilon = 1.0, double x = 1.0, double y = 1.0, double z = 1.0)
+      : length_x(x), length_y(y), length_z(z), epsilon(epsilon), sigma(sigma),
+        space(number_of_molecules) {
+    sigma_6 = std::pow(sigma, 6);
+    sigma_12 = sigma_6 * sigma_6;
+    radius_cut_abs = radius_cut_in_sigma * sigma;
+
     init_cubic_grid();
     init_velocity(seed);
     border_periodic();
@@ -84,6 +95,63 @@ public:
     space.remove_total_momentum(temperature);
   }
 
+  double lennard_jones(double r2) {
+    double force = 0;
+    if (r2 <= radius_cut_abs * radius_cut_abs && r2 > 1e-15) {
+      double r2inv = 1.0 / r2;              // 1/r^2
+      double r6inv = r2inv * r2inv * r2inv; // 1/r^6
+      double r8inv = r6inv * r2inv;         // 1/r^8
+
+      force = 48 * epsilon * r8inv * (sigma_12 * r6inv - 0.5 * sigma_6);
+    }
+    return force;
+  }
+
+  std::vector<std::array<double, 3>> calculate_force() {
+    double radius_2 = 0;
+    double force_scalar = 0;
+    auto &space = get_space();
+    int number_of_molecules = space.get_amount_of_molecules();
+    std::vector<std::array<double, 3>> force(number_of_molecules, {0, 0, 0});
+
+    for (int i = 0; i < number_of_molecules - 1; i++) {
+      std::array<double, 3> coord_i = space.get_molecule(i).get_coordinate();
+      for (int j = i + 1; j < number_of_molecules; j++) {
+        std::array<double, 3> coord_j = space.get_molecule(j).get_coordinate();
+        std::array<double, 3> dr = {0, 0, 0};
+
+        for (int k = 0; k < 3; k++) {
+          dr[k] = coord_i[k] - coord_j[k];
+          // periodic_border
+          dr[k] -= get_length(k) * std::round(dr[k] / get_length(k));
+        }
+        radius_2 = dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2];
+        force_scalar = lennard_jones(radius_2);
+
+        for (int k = 0; k < 3; k++) {
+          force[i][k] += force_scalar * dr[k];
+          force[j][k] -= force_scalar * dr[k];
+        }
+      }
+    }
+
+    return force;
+  }
+
+  int get_radius_cut() const { return radius_cut_abs; }
+  double get_length_x() const { return length_x; }
+  double get_length_y() const { return length_y; }
+  double get_length_z() const { return length_z; }
+  double get_length(int axis) const {
+    if (axis == 0)
+      return length_x;
+    else if (axis == 1)
+      return length_y;
+    else
+      return length_z;
+  }
+
+  void set_radius_cut(double new_radius) { radius_cut_abs = new_radius; }
   void set_volume(double x, float y, float z) {
     length_x = x;
     length_y = y;
@@ -97,6 +165,7 @@ public:
     std::cout << "Num of molecules:  " << space.get_amount_of_molecules()
               << std::endl;
   }
+
   Space &get_space() { return space; }
   const Space &get_space() const { return space; }
 };
