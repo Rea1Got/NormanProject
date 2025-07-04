@@ -17,7 +17,7 @@ private:
   double energy_c = 1;
   Space space;
 
-  void adjust_coordinate(double &coord, float length) {
+  void adjust_coordinate(double &coord, double length) {
     coord = std::fmod(coord, length);
     if (coord < 0) {
       coord += length;
@@ -26,11 +26,16 @@ private:
 
   void border_periodic() {
     for (int i = 0; i < space.get_amount_of_molecules(); i++) {
-      auto &current_molecule = space.get_molecule(i); // border-periodic
+      Molecule &current_molecule = space.get_molecule(i);
       std::array<double, 3> coord = current_molecule.get_coordinate();
+      std::array<double, 3> coord_prev = current_molecule.get_coordinate_prev();
       adjust_coordinate(coord[0], length_x);
       adjust_coordinate(coord[1], length_y);
       adjust_coordinate(coord[2], length_z);
+      adjust_coordinate(coord_prev[0], length_x);
+      adjust_coordinate(coord_prev[1], length_y);
+      adjust_coordinate(coord_prev[2], length_z);
+
       current_molecule.set_coordinate(coord);
     }
   }
@@ -75,11 +80,11 @@ private:
   }
 
 public:
-  Volume(int number_of_molecules, int seed, double temperature = 1.0,
+  Volume(int num_molecules, int seed, double temperature = 1.0,
          double radius_cut_in_sigma = 1.0, double sigma = 1.0,
          double epsilon = 1.0, double x = 1.0, double y = 1.0, double z = 1.0)
       : length_x(x), length_y(y), length_z(z), epsilon(epsilon), sigma(sigma),
-        space(number_of_molecules) {
+        space(num_molecules) {
     sigma_6 = std::pow(sigma, 6);
     sigma_12 = sigma_6 * sigma_6;
     radius_cut_abs = radius_cut_in_sigma * sigma;
@@ -114,18 +119,18 @@ public:
     double force_scalar = 0.0;
     double pot_energy = 0.0;
     Space &space = get_space();
-    int number_of_molecules = space.get_amount_of_molecules();
-    std::vector<std::array<double, 3>> force(number_of_molecules, {0, 0, 0});
+    int num_molecules = space.get_amount_of_molecules();
+    std::vector<std::array<double, 3>> force(num_molecules, {0, 0, 0});
 
-    for (int i = 0; i < number_of_molecules - 1; i++) {
+    for (int i = 0; i < num_molecules - 1; i++) {
       std::array<double, 3> coord_i = space.get_molecule(i).get_coordinate();
-      for (int j = i + 1; j < number_of_molecules; j++) {
+      for (int j = i + 1; j < num_molecules; j++) {
         std::array<double, 3> coord_j = space.get_molecule(j).get_coordinate();
         std::array<double, 3> dr = {0, 0, 0};
 
         for (int k = 0; k < 3; k++) {
           dr[k] = coord_i[k] - coord_j[k];
-          // periodic_border
+          // periodic_border rewrite to adjust_coordinate
           dr[k] -= get_length(k) * std::round(dr[k] / get_length(k));
         }
         radius_2 = dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2];
@@ -144,6 +149,50 @@ public:
     force.push_back({pot_energy, 0.0, 0.0});
 
     return force;
+  }
+
+  std::pair<double, double>
+  integrate_verle(std::vector<std::array<double, 3>> &force,
+                  double dt = 0.001) {
+    std::pair<double, double> result; // (moment temp and energy) on 1 molecule
+    double potential_energy = force.back()[0];
+    double kinetic_energy = 0.0;
+    std::array<double, 3> coordinates_new;
+    std::array<double, 3> coordinates;
+    std::array<double, 3> coordinates_prev;
+    std::array<double, 3> velocity;
+    std::array<double, 3> velocity_new;
+    double mass = 1.0;
+    double acceleration = 0.0;
+
+    unsigned int num_molecules = space.get_amount_of_molecules();
+    for (int i = 0; i < num_molecules; i++) {
+      Molecule &molecule = space.get_molecule(i);
+      mass = molecule.get_mass();
+      coordinates = molecule.get_coordinate();
+      coordinates_prev = molecule.get_coordinate_prev();
+      velocity = molecule.get_velocity();
+
+      for (int j = 0; j < 3; j++) {
+        acceleration = force[i][j] / mass;
+        coordinates_new[j] =
+            2 * coordinates[j] - coordinates_prev[j] + acceleration * dt * dt;
+
+        // border_periodic
+        adjust_coordinate(coordinates_new[j], get_length(j));
+
+        velocity_new[j] = (coordinates_new[j] - coordinates_prev[j]) / (2 * dt);
+        kinetic_energy += 0.5 * mass * velocity_new[j] * velocity_new[j];
+      }
+      molecule.set_coordinate_prev(coordinates);
+      molecule.set_coordinate(coordinates_new);
+      molecule.set_velocity(velocity_new);
+    }
+
+    result.first = kinetic_energy / num_molecules;
+    result.second = (potential_energy + kinetic_energy) / num_molecules;
+
+    return result;
   }
 
   int get_radius_cut() const { return radius_cut_abs; }

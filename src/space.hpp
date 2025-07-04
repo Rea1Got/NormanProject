@@ -31,7 +31,7 @@ public:
     molecules = new_molecules;
   };
 
-  void remove_total_momentum(double temperature) {
+  void remove_total_momentum(double temperature, double dt = 0.001) {
     if (molecules.empty())
       return;
 
@@ -60,10 +60,15 @@ public:
 
     for (int i = 0; i < num_mol; i++) {
       Molecule &mol = molecules[i];
-      auto vel = mol.get_velocity();
+      std::array<double, 3> coordinates_prev;
+      std::array<double, 3> coordinates = mol.get_coordinate();
+      std::array<double, 3> vel = mol.get_velocity();
       for (int j = 0; j < 3; j++) {
         vel[j] = (vel[j] - total_velocity[j]) * rescale_velocity[j];
+        coordinates_prev[j] = coordinates[j] - vel[j] * dt;
       }
+
+      mol.set_coordinate_prev(coordinates_prev);
       mol.set_velocity(vel);
     }
   }

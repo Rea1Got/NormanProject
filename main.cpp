@@ -6,33 +6,42 @@
 #include <iostream>
 
 int main() {
-  int seed, number_of_molecules = 0;
-  std::cin >> number_of_molecules >> seed;
-  double temperature = 0;
-  std::cin >> temperature;
-  Volume volume(number_of_molecules, seed, temperature, 2.5, 0.34,
-                120 * 1.34e-23);
+  const int seed = 2;
+  const int num_molecules = 500;
+  const double temperature = 1.0;
+  const double dt = 0.001;
+  const int total_steps = 100;
+  const double r_cut = 2.5;
+  const double sigma = 1;
+  const double epsilon = 1;
 
-  std::vector<std::array<double, 3>> force;
-  force = volume.calculate_force();
-  for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
-    Molecule &mol = volume.get_space().get_molecule(i);
-    mol.print_full_information();
-    std::cout << "Current force: " << force[i][0] << " " << force[i][1] << " "
-              << force[i][2] << "\n\n";
-  }
-  std::array<double, 3> pot_energy = force.back();
-  std::cout << "Pot_energy: " << pot_energy[0] << "\n";
+  Volume volume(num_molecules, seed, temperature, r_cut, sigma, epsilon, 100,
+                100, 100);
 
-  double v_sum = 0.0, v2_sum = 0.0;
-  for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
-    auto velocity = volume.get_space().get_molecule(i).get_velocity();
-    for (int j = 0; j < 3; j++) {
-      v_sum += velocity[j];
-      v2_sum += velocity[j] * velocity[j];
+  std::cout << "===== Начало симуляции =====\n";
+  std::cout << "Молекул: " << num_molecules << "\n";
+  std::cout << "Шаг по времени: " << dt << "\n";
+  std::cout << "Температура: " << temperature << "\n\n";
+
+  std::cout << "Скорость на 0 шаге: "
+            << volume.get_space().get_molecule(0).get_velocity()[2] << "\n";
+  for (int step = 0; step <= total_steps; step++) {
+    auto force = volume.calculate_force();
+
+    auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
+
+    if (step % 10 == 0) {
+      std::cout << "Шаг " << step << ":\n";
+      std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
+      std::cout << "  Полная энергия: " << total_energy << "\n";
+
+      for (int i = 0; i < 2; i++) {
+        volume.get_space().get_molecule(i).print_full_information();
+      }
+      std::cout << "----------------------\n";
     }
   }
-  std::cout << "Sum V: " << v_sum << " Sum V^2: " << v2_sum << "\n\n";
 
+  std::cout << "===== Симуляция завершена =====\n";
   return 0;
 }

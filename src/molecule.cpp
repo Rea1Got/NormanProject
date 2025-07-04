@@ -13,15 +13,10 @@ void Molecule::print_velocity() const {
   std::cout << "Velocity { " << velocity[0] << "; " << velocity[1] << "; "
             << velocity[2] << " }" << std::endl;
 }
-void Molecule::print_acceleration() const {
-  std::cout << "Acceleration { " << acceleration[0] << "; " << acceleration[1]
-            << "; " << acceleration[2] << " }" << std::endl;
-}
 
 void Molecule::print_full_information() const {
   print_id();
   print_coordinate();
   print_velocity();
-  print_acceleration();
   std::cout << std::endl;
 }
