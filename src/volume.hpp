@@ -18,6 +18,7 @@ private:
   Space space;
 
   void adjust_coordinate(double &coord, double length) {
+    double original = coord;
     coord = std::fmod(coord, length);
     if (coord < 0) {
       coord += length;
@@ -37,6 +38,7 @@ private:
       adjust_coordinate(coord_prev[2], length_z);
 
       current_molecule.set_coordinate(coord);
+      current_molecule.set_coordinate_prev(coord_prev);
     }
   }
 
@@ -161,7 +163,7 @@ public:
     std::array<double, 3> coordinates;
     std::array<double, 3> coordinates_prev;
     std::array<double, 3> velocity;
-    std::array<double, 3> velocity_new;
+    std::array<double, 3> velocity_curr;
     double mass = 1.0;
     double acceleration = 0.0;
 
@@ -171,22 +173,30 @@ public:
       mass = molecule.get_mass();
       coordinates = molecule.get_coordinate();
       coordinates_prev = molecule.get_coordinate_prev();
-      velocity = molecule.get_velocity();
+      velocity_curr = molecule.get_velocity();
 
       for (int j = 0; j < 3; j++) {
         acceleration = force[i][j] / mass;
         coordinates_new[j] =
             2 * coordinates[j] - coordinates_prev[j] + acceleration * dt * dt;
 
-        // border_periodic
-        adjust_coordinate(coordinates_new[j], get_length(j));
+        double volume_len = get_length(j);
+        adjust_coordinate(coordinates_new[j], volume_len);
 
-        velocity_new[j] = (coordinates_new[j] - coordinates_prev[j]) / (2 * dt);
-        kinetic_energy += 0.5 * mass * velocity_new[j] * velocity_new[j];
+        // Minimum Image Convention 
+        double delta_r = coordinates_new[j] - coordinates_prev[j];
+        if (delta_r > 0.5 * volume_len) {
+          delta_r -= volume_len;
+        } else if (delta_r < -0.5 * volume_len) {
+          delta_r += volume_len;
+        }
+        velocity[j] = delta_r / (2 * dt);
+
+        kinetic_energy += 0.5 * mass * velocity[j] * velocity[j];
       }
       molecule.set_coordinate_prev(coordinates);
       molecule.set_coordinate(coordinates_new);
-      molecule.set_velocity(velocity_new);
+      molecule.set_velocity(velocity);
     }
 
     result.first = kinetic_energy / num_molecules;
