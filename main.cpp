@@ -43,6 +43,17 @@ int main() {
       for (int i = 0; i < 2; i++) {
         volume.get_space().get_molecule(i).print_full_information();
       }
+
+      std::array<double, 3> v = {0, 0, 0};
+      for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
+        std::array<double, 3> vel =
+            volume.get_space().get_molecule(i).get_velocity();
+        for (int j = 0; j < 3; j++) {
+          v[j] += vel[j];
+        }
+      }
+      std::cout << "Импульс: "
+                << std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) << "\n ";
       std::cout << "----------------------\n";
     }
   }
