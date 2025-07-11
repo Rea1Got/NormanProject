@@ -4,6 +4,8 @@
 #include "molecule.hpp"
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
+#include <iostream>
 #include <vector>
 
 class Space {
@@ -71,6 +73,30 @@ public:
       mol.set_coordinate_prev(coordinates_prev);
       mol.set_velocity(vel);
     }
+  }
+
+  void write_velocity(std::string file_name) {
+    std::ofstream f_mol_vel(file_name, std::ios::app);
+    for (int i = 0; i < get_amount_of_molecules(); i++) {
+      for (int j = 0; j < 3; j++) {
+        f_mol_vel << get_molecule(i).get_velocity()[j] << " ";
+      }
+    }
+    f_mol_vel << "\n";
+    f_mol_vel.close();
+  }
+
+  void impulse_print() {
+    std::array<double, 3> v = {0, 0, 0};
+    for (int i = 0; i < get_amount_of_molecules(); i++) {
+      std::array<double, 3> vel = get_molecule(i).get_velocity();
+      for (int j = 0; j < 3; j++) {
+        v[j] += vel[j];
+      }
+    }
+    std::cout << "Импульс: "
+              << std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) << "\n ";
+    std::cout << "----------------------\n";
   }
 };
 

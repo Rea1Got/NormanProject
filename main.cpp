@@ -1,63 +1,55 @@
-// #include "src/functions.hpp"
+#include "include/json.hpp" //nlohmann
 #include "src/molecule.hpp"
 #include "src/space.hpp"
 #include "src/volume.hpp"
 #include <cstdlib>
 #include <iostream>
+#include <string>
+
+using json = nlohmann::json;
 
 int main() {
-  const int seed = 1;
-  const int num_molecules = 100;
-  const double temperature = 0.001;
-  const double dt = 0.0001;
-  const int total_steps = 10000;
-  const double r_cut = 2.5;
-  const double sigma = 1;
-  const double epsilon = 1;
+  std::ifstream cfg_file("cfg/cfg.json");
+  json cfg;
+  cfg_file >> cfg;
+
+  std::string velocity_file = cfg["velocity_file"];
+  int seed = cfg["seed"];
+  int num_molecules = cfg["num_molecules"];
+  double temperature = cfg["temperature"];
+  double dt = cfg["dt"];
+  int total_steps = cfg["total_steps"];
+  double r_cut = cfg["r_cut"];
+  double sigma = cfg["sigma"];
+  double epsilon = cfg["epsilon"];
+  int snapshot = cfg["snapshot"]; // how often you want to see system state
 
   Volume volume(num_molecules, seed, temperature, r_cut, sigma, epsilon, 10, 10,
                 10);
-  // std::array<double, 3> vel = {0.05, 0.05, 0.05};
-  // std::array<double, 3> coord_prev = {-0.05, -0.05, -0.05};
-  //
-  // volume.get_space().get_molecule(0).set_velocity(vel);
-  // volume.get_space().get_molecule(0).set_coordinate_prev(coord_prev);
+  Space &space = volume.get_space();
 
   std::cout << "===== Начало симуляции =====\n";
   std::cout << "Молекул: " << num_molecules << "\n";
   std::cout << "Шаг по времени: " << dt << "\n";
   std::cout << "Температура: " << temperature << "\n\n";
 
-  std::cout << "Скорость на 0 шаге: "
-            << volume.get_space().get_molecule(0).get_velocity()[2] << "\n";
   for (int step = 0; step <= total_steps; step++) {
     auto force = volume.calculate_force();
-
     auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
 
-    if (step % 1000 == 0) {
+    if (step % snapshot == 0) {
       std::cout << "Шаг " << step << ":\n";
       std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
       std::cout << "  Полная энергия: " << total_energy << "\n";
-
       for (int i = 0; i < 2; i++) {
-        volume.get_space().get_molecule(i).print_full_information();
+        space.get_molecule(i).print_full_information();
       }
+      space.impulse_print();
 
-      std::array<double, 3> v = {0, 0, 0};
-      for (int i = 0; i < volume.get_space().get_amount_of_molecules(); i++) {
-        std::array<double, 3> vel =
-            volume.get_space().get_molecule(i).get_velocity();
-        for (int j = 0; j < 3; j++) {
-          v[j] += vel[j];
-        }
-      }
-      std::cout << "Импульс: "
-                << std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) << "\n ";
-      std::cout << "----------------------\n";
+      space.write_velocity(velocity_file);
     }
   }
-
   std::cout << "===== Симуляция завершена =====\n";
+
   return 0;
 }
