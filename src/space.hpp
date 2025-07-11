@@ -4,6 +4,7 @@
 #include "molecule.hpp"
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -75,8 +76,12 @@ public:
     }
   }
 
-  void write_velocity(std::string file_name) {
-    std::ofstream f_mol_vel(file_name, std::ios::app);
+  void write_velocity(std::string file) {
+    // create folder if needed
+    std::filesystem::create_directories(
+        std::filesystem::path(file).parent_path());
+
+    std::ofstream f_mol_vel(file, std::ios::app);
     for (int i = 0; i < get_amount_of_molecules(); i++) {
       for (int j = 0; j < 3; j++) {
         f_mol_vel << get_molecule(i).get_velocity()[j] << " ";
