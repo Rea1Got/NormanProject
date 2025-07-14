@@ -23,9 +23,12 @@ int main() {
   double sigma = cfg["sigma"];
   double epsilon = cfg["epsilon"];
   int snapshot = cfg["snapshot"]; // how often you want to see system state
+  double x = cfg["length_x"];
+  double y = cfg["length_y"];
+  double z = cfg["length_z"];
 
-  Volume volume(num_molecules, seed, temperature, r_cut, sigma, epsilon, 10, 10,
-                10);
+  Volume volume(num_molecules, seed, temperature, r_cut, sigma, epsilon, x, y,
+                z);
   Space &space = volume.get_space();
 
   std::cout << "===== Начало симуляции =====\n";
