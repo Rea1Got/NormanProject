@@ -3,6 +3,7 @@
 #include "src/space.hpp"
 #include "src/volume.hpp"
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <string>
 
@@ -44,10 +45,10 @@ int main() {
       std::cout << "Шаг " << step << ":\n";
       std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
       std::cout << "  Полная энергия: " << total_energy << "\n";
-      for (int i = 0; i < 2; i++) {
-        space.get_molecule(i).print_full_information();
-      }
-      space.impulse_print();
+      // for (int i = 0; i < 2; i++) {
+      //   space.get_molecule(i).print_full_information();
+      // }
+      // space.impulse_print();
 
       space.write_velocity(velocity_file);
     }

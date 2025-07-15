@@ -1,19 +1,19 @@
 import matplotlib.pyplot as plt 
 import numpy as np
-import matplotlib as mpl
 import json
 
-NUM_BARS = 25
-THERM_BALANCE = 100  # number of first sample after thermodynamic balance 
+NUM_BARS = 30
+THERM_BALANCE = 500  # number of first sample after thermodynamic balance 
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
+    file_data = cfg["velocity_file"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
     snapshot = cfg["snapshot"]
     f.close()
 
-data_generated = np.loadtxt("tmp/velocity.txt")
+data_generated = np.loadtxt(file_data)
 vel_coord = [[], [], []]
 velocity = []
 for i in range(THERM_BALANCE, len(data_generated)):
@@ -30,21 +30,27 @@ vel_max = velocity[-1]
 vel_coord_max = [vel_coord[0][-1], vel_coord[1][-1], vel_coord[2][-1]]
 
 prob = np.zeros(NUM_BARS)
-prob_coord = [np.zeros(NUM_BARS) for _ in range(3)]
+# prob_coord = [np.zeros(NUM_BARS) for _ in range(3)]
 
 for i in range(len(velocity)):
     for j in range(NUM_BARS):
         if (j/NUM_BARS*vel_max <= velocity[i] < (j+1)/NUM_BARS*vel_max):
             prob[j] += 1/len(velocity)
-        for k in range(3):
-            if (j/NUM_BARS*vel_coord_max[k] <= vel_coord[k][i] < (j+1)/NUM_BARS*vel_coord_max[k]):
-                prob_coord[k][j] += 1/len(velocity)
+        # for k in range(3):
+        #     if (j/NUM_BARS*vel_coord_max[k] <= vel_coord[k][i] < (j+1)/NUM_BARS*vel_coord_max[k]):
+        #         prob_coord[k][j] += 1/len(velocity)
+
+all_squared = np.concatenate(vel_coord)
+total_max = max(vel_coord_max)
+bin_edges = np.linspace(0, total_max, NUM_BARS + 1)
+hist, _ = np.histogram(all_squared, bins=bin_edges)
+prob_avg = hist / len(all_squared)
 
 ########################################################################## 
-fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
-plt.subplots_adjust(wspace=0.3, hspace=0.4)  
-#######################
-axs[0, 0].plot(
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 10))
+plt.subplots_adjust(hspace=0.4)  
+
+axs[0].plot(
     [i/NUM_BARS*vel_max for i in range(NUM_BARS)],
     prob,
     'o', 
@@ -52,37 +58,28 @@ axs[0, 0].plot(
     markersize=5,
     mec='black'
 )
-axs[0, 0].set_xlabel('$v$, абсолютная скорость молекулы')
-axs[0, 0].set_ylabel('Вероятность')
-axs[0, 0].set_title('Распределение абсолютных скоростей', loc='left')
-axs[0, 0].grid(True)
-#######################
-titles = ['X-компонента скорости', 'Y-компонента скорости', 'Z-компонента скорости']
-positions = [(0,1), (1,0), (1,1)]
+axs[0].set_xlabel('$v$, абсолютная скорость молекулы')
+axs[0].set_ylabel('Вероятность')
+axs[0].set_title('Распределение абсолютных скоростей', loc='left')
+axs[0].grid(True)
 
-for i in range(3):
-    row, col = positions[i]
-    
-    ax_component = [j/NUM_BARS*vel_coord_max[i] for j in range(NUM_BARS)]
-    
-    axs[row, col].semilogy(
-        ax_component,
-        prob_coord[i],
-        'o',
-        color='blue' if i==0 else 'green' if i==1 else 'purple',
-        markersize=5,
-        mec='black'
-    )
-    axs[row, col].set_xlabel(f'$v_{"xyz"[i]}^2$, компонента скорости')
-    axs[row, col].set_ylabel('Вероятность')
-    axs[row, col].set_title(titles[i], loc='left')
-    axs[row, col].grid(True)
+axs[1].semilogy(
+    bin_edges[:-1],
+    prob_avg,
+    'o',
+    color='blue',
+    markersize=5,
+    mec='black'
+)
+axs[1].set_xlabel('$v^2$, квадрат компоненты скорости')
+axs[1].set_ylabel('Вероятность')
+axs[1].set_title('Усредненное распределение квадрата компоненты скорости', loc='left')
+axs[1].grid(True)
 
 fig.suptitle('Распределения скоростей молекул', fontsize=16)
 plt.show()
 ########################################################################## 
-print('Clear files? y/n')
+print('Clear file ' + file_data + ': y/n?')
 if (input().lower() == 'y'):
-    with open('tmp/velocity.txt', 'w') as file:
+    with open(file_data, 'w') as file:
         file = ''
-

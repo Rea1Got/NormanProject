@@ -1,15 +1,15 @@
 {
     "velocity_file": "tmp/velocity.txt",
     "seed": 1,
-    "num_molecules": 150,
-    "temperature": 0.0001,
+    "num_molecules": 500,
+    "temperature": 0.001,
     "dt": 0.0001,
-    "total_steps": 1000000,
+    "total_steps": 100000,
     "r_cut": 2.5,
-    "sigma": 1.0,
-    "epsilon": 1.0,
-    "snapshot": 1000,
-    "length_x": 10,
-    "length_y": 10,
-    "length_z": 10
+    "sigma": 2.0,
+    "epsilon": 0.1,
+    "snapshot": 100,
+    "length_x": 15,
+    "length_y": 15,
+    "length_z": 15
 }
