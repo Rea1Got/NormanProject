@@ -85,12 +85,14 @@ public:
   Volume(int num_molecules, int seed, double temperature = 1.0,
          double radius_cut_in_sigma = 1.0, double sigma = 1.0,
          double epsilon = 1.0, double x = 1.0, double y = 1.0, double z = 1.0)
-      : length_x(x), length_y(y), length_z(z), epsilon(epsilon), sigma(sigma),
-        space(num_molecules) {
+      : epsilon(epsilon), sigma(sigma), space(num_molecules) {
     sigma_6 = std::pow(sigma, 6);
     sigma_12 = sigma_6 * sigma_6;
     radius_cut_abs = radius_cut_in_sigma * sigma;
     energy_c = potential_energy(std::pow(radius_cut_abs, -2));
+    length_x = x * sigma;
+    length_y = y * sigma;
+    length_z = z * sigma;
 
     init_cubic_grid();
     init_velocity(seed);
@@ -183,7 +185,7 @@ public:
         double volume_len = get_length(j);
         adjust_coordinate(coordinates_new[j], volume_len);
 
-        // Minimum Image Convention 
+        // Minimum Image Convention
         double delta_r = coordinates_new[j] - coordinates_prev[j];
         if (delta_r > 0.5 * volume_len) {
           delta_r -= volume_len;

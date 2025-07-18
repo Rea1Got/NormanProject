@@ -1,4 +1,5 @@
 {
+    "_comment": "r_cut and length_i are in sigma units",
     "velocity_file": "tmp/velocity.txt",
     "seed": 1,
     "num_molecules": 500,
