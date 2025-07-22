@@ -3,14 +3,15 @@ import numpy as np
 import json
 
 NUM_BARS = 30  # number of points on plot
-THERM_BALANCE = 0  # number of first sample after thermodynamic balance 
+THERM_BALANCE = 100  # number of first sample after thermodynamic balance 
 EXCLUDE_LAST = 5  # exclude last EXCLUDE_LAST points
-BOLTZMANN = 1.38E-23
+BOLTZMANN = 1.38069E-23
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
     file_data = cfg["velocity_file"]
     epsilone_real = cfg["epsilon_real"]
+    m_real = cfg["mass_real"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
     snapshot = cfg["snapshot"]
@@ -19,12 +20,17 @@ with open("cfg/cfg.json", "r") as f:
 data_generated = np.loadtxt(file_data)
 vel_coord = [[], [], []]
 velocity = []
+kinetic_energy_per_step = []
 for i in range(THERM_BALANCE, len(data_generated)):
+    step_energy = 0
     for j in range(0, len(data_generated[i]), 3):
         velocity.append(np.sqrt(data_generated[i][j]**2 + data_generated[i][j+1]**2 + data_generated[i][j+2]**2))
         vel_coord[0].append(data_generated[i][j]**2)
         vel_coord[1].append(data_generated[i][j+1]**2)
         vel_coord[2].append(data_generated[i][j+2]**2)
+        step_energy += 0.5 * (data_generated[i][j]**2 + data_generated[i][j+1]**2 + data_generated[i][j+2]**2)
+    kinetic_energy_per_step.append(step_energy)
+
 velocity.sort()
 for i in range(3):
     vel_coord[i].sort()
@@ -33,15 +39,11 @@ vel_max = velocity[-1]
 vel_coord_max = [vel_coord[0][-1], vel_coord[1][-1], vel_coord[2][-1]]
 
 prob = np.zeros(NUM_BARS)
-# prob_coord = [np.zeros(NUM_BARS) for _ in range(3)]
 
 for i in range(len(velocity)):
     for j in range(NUM_BARS):
         if (j/NUM_BARS*vel_max <= velocity[i] < (j+1)/NUM_BARS*vel_max):
             prob[j] += 1/len(velocity)
-        # for k in range(3):
-        #     if (j/NUM_BARS*vel_coord_max[k] <= vel_coord[k][i] < (j+1)/NUM_BARS*vel_coord_max[k]):
-        #         prob_coord[k][j] += 1/len(velocity)
 
 all_squared = np.concatenate(vel_coord)
 v2_mean = all_squared.mean()
@@ -75,6 +77,31 @@ print(f"R² = {r_squared:.6f}")
 print(f"Средний квадрат скорости = {v2_mean:.6f}")
 physical_temp = v2_mean * (epsilone_real / BOLTZMANN)
 print(f"Физическая температура = {physical_temp:.6f} K")
+avg_kinetic_energy = np.mean(kinetic_energy_per_step)
+print(f"Средняя кинетическая энергия системы: {avg_kinetic_energy:.2f} безразм. ед.")
+##############################
+k_B_corrected = - m_real / (2 * k * physical_temp)
+print(f"\nПостоянная Больцмана: {k_B_corrected:.6e} Дж/К")
+
+error_pct = abs(k_B_corrected - BOLTZMANN) / BOLTZMANN * 100
+print(f"Погрешность: {error_pct:.6f}%")
+########################################################################## 
+
+kinetic_energy_per_step = []
+for i in range(len(data_generated)):
+    step_energy = 0.5 * np.sum(data_generated[i]**2)
+    kinetic_energy_per_step.append(step_energy)
+
+plt.figure(figsize=(12, 6))
+plt.plot(kinetic_energy_per_step)
+plt.xlabel('Номер шага')
+plt.ylabel('Кинетическая энергия системы')
+plt.title('Эволюция кинетической энергии')
+# plt.legend()
+plt.grid(True)
+plt.savefig('energy_evolution.png')
+plt.show()
+
 ########################################################################## 
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 10))
 plt.subplots_adjust(hspace=0.4)  
@@ -116,6 +143,7 @@ axs[1].set_title('Усредненное распределение квадра
 axs[1].grid(True)
 
 fig.suptitle('Распределения скоростей молекул', fontsize=16)
+plt.savefig('velocity_plot.png')
 plt.show()
 ########################################################################## 
 print('Clear file ' + file_data + ': y/n?')

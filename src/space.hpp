@@ -57,9 +57,9 @@ public:
     }
 
     std::array<double, 3> rescale_velocity{
-        std::sqrt(3 * temperature / total_velocity_2[0]),
-        std::sqrt(3 * temperature / total_velocity_2[1]),
-        std::sqrt(3 * temperature / total_velocity_2[2])};
+        std::sqrt(temperature / total_velocity_2[0]),
+        std::sqrt(temperature / total_velocity_2[1]),
+        std::sqrt(temperature / total_velocity_2[2])};
 
     for (int i = 0; i < num_mol; i++) {
       Molecule &mol = molecules[i];
