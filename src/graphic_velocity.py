@@ -2,12 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
-NUM_BARS = 30
-THERM_BALANCE = 500  # number of first sample after thermodynamic balance 
+NUM_BARS = 30  # number of points on plot
+THERM_BALANCE = 0  # number of first sample after thermodynamic balance 
+EXCLUDE_LAST = 5  # exclude last EXCLUDE_LAST points
+BOLTZMANN = 1.38E-23
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
     file_data = cfg["velocity_file"]
+    epsilone_real = cfg["epsilon_real"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
     snapshot = cfg["snapshot"]
@@ -41,11 +44,37 @@ for i in range(len(velocity)):
         #         prob_coord[k][j] += 1/len(velocity)
 
 all_squared = np.concatenate(vel_coord)
+v2_mean = all_squared.mean()
+
 total_max = max(vel_coord_max)
 bin_edges = np.linspace(0, total_max, NUM_BARS + 1)
 hist, _ = np.histogram(all_squared, bins=bin_edges)
 prob_avg = hist / len(all_squared)
 
+mid_bins = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+valid_mask = prob_avg > 0
+x_data = mid_bins[valid_mask][1:-EXCLUDE_LAST]  
+y_log = np.log(prob_avg[valid_mask])[1:-EXCLUDE_LAST]  
+
+coefficients = np.polyfit(x_data, y_log, deg=1)
+k = coefficients[0]
+b = coefficients[1]
+
+x_fit = np.linspace(0, total_max, 200)
+y_fit = np.exp(b + k * x_fit)
+
+y_pred = k * x_data + b
+ss_res = np.sum((y_log - y_pred)**2)
+ss_tot = np.sum((y_log - np.mean(y_log))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+print(f"Аппроксимация: ln(y) = {k:.6f}x + {b:.6f}")
+print(f"Экспонента: y = {np.exp(b):.6f} * exp({k:.6f}x)")
+print(f"R² = {r_squared:.6f}")
+print(f"Средний квадрат скорости = {v2_mean:.6f}")
+physical_temp = v2_mean * (epsilone_real / BOLTZMANN)
+print(f"Физическая температура = {physical_temp:.6f} K")
 ########################################################################## 
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 10))
 plt.subplots_adjust(hspace=0.4)  
@@ -64,13 +93,23 @@ axs[0].set_title('Распределение абсолютных скорост
 axs[0].grid(True)
 
 axs[1].semilogy(
-    bin_edges[:-1],
+    mid_bins,
     prob_avg,
     'o',
     color='blue',
     markersize=5,
-    mec='black'
+    mec='black',
+    label='Данные'
 )
+
+axs[1].semilogy(
+    x_fit,
+    y_fit,
+    'r-',
+    linewidth=2,
+    label=f'Аппроксимация: $y = {np.exp(b):.3f}e^{{{k:.3f}x}}$'
+)
+
 axs[1].set_xlabel('$v^2$, квадрат компоненты скорости')
 axs[1].set_ylabel('Вероятность')
 axs[1].set_title('Усредненное распределение квадрата компоненты скорости', loc='left')
