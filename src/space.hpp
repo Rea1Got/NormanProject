@@ -16,11 +16,12 @@ private:
 public:
   Space() = default;
 
-  Space(int number_of_molecules) {
+  Space(int number_of_molecules, double mass = 1.0) {
     molecules.reserve(number_of_molecules);
     for (int i = 0; i < number_of_molecules; i++) {
       molecules.push_back(Molecule());
       molecules.back().set_id(i);
+      molecules.back().set_mass(mass);
     }
   }
 

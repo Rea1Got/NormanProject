@@ -15,6 +15,8 @@ private:
   double sigma_6 = 1;
   double sigma_12 = 1;
   double energy_c = 1;
+  double mass_real = 1E-21;
+  double sigma_real = 1E-10;
   Space space;
 
   void adjust_coordinate(double &coord, double length) {
@@ -81,18 +83,59 @@ private:
     }
   }
 
+  void init_density(double density_SI) {
+    double total_mass_SI = space.get_amount_of_molecules() * mass_real;
+    double volume_SI = total_mass_SI / density_SI;
+    double length_SI = std::pow(volume_SI, 1.0 / 3.0);
+    double length = length_SI / sigma_real;
+
+    length_x = length;
+    length_y = length;
+    length_z = length;
+  }
+
+  void validate_parameters() {
+    double V_star = length_x * length_y * length_z;
+    double rho_star = space.get_amount_of_molecules() / V_star;
+    if (rho_star < 0.7 || rho_star > 1.0) {
+      std::cerr << "WARNING: Unusual density: " << rho_star
+                << " (expected 0.8-0.9 for liquid Ar)\n";
+    }
+  }
+
 public:
-  Volume(int num_molecules, int seed, double temperature = 1.0,
-         double radius_cut_in_sigma = 1.0, double sigma = 1.0,
-         double epsilon = 1.0, double x = 1.0, double y = 1.0, double z = 1.0)
-      : epsilon(epsilon), sigma(sigma), space(num_molecules) {
+  // Volume(int num_molecules, int seed, double temperature = 1.0,
+  //        double radius_cut_in_sigma = 1.0, double sigma = 1.0,
+  //        double epsilon = 1.0, double x = 1.0, double y = 1.0, double z
+  //        = 1.0)
+  //     : epsilon(epsilon), sigma(sigma), space(num_molecules) {
+  //   sigma_6 = std::pow(sigma, 6);
+  //   sigma_12 = sigma_6 * sigma_6;
+  //   radius_cut_abs = radius_cut_in_sigma * sigma;
+  //   energy_c = potential_energy(std::pow(radius_cut_abs, -2));
+  //   length_x = x * sigma;
+  //   length_y = y * sigma;
+  //   length_z = z * sigma;
+  //
+  //   init_cubic_grid();
+  //   init_velocity(seed);
+  //   border_periodic();
+  //
+  //   space.remove_total_momentum(temperature);
+  // }
+  Volume(int num_molecules, int seed, double density_SI, double mass_real,
+         double sigma_real, double temperature = 1.0,
+         double radius_cut_in_sigma = 2.5, double sigma = 1.0,
+         double epsilon = 1.0)
+      : epsilon(epsilon), sigma(sigma), space(num_molecules),
+        sigma_real(sigma_real), mass_real(mass_real) {
     sigma_6 = std::pow(sigma, 6);
     sigma_12 = sigma_6 * sigma_6;
     radius_cut_abs = radius_cut_in_sigma * sigma;
     energy_c = potential_energy(std::pow(radius_cut_abs, -2));
-    length_x = x * sigma;
-    length_y = y * sigma;
-    length_z = z * sigma;
+
+    init_density(density_SI);
+    validate_parameters();
 
     init_cubic_grid();
     init_velocity(seed);
@@ -100,7 +143,6 @@ public:
 
     space.remove_total_momentum(temperature);
   }
-
   double potential_energy(double r2inv) {
     double r6inv = r2inv * r2inv * r2inv;
     return 4 * epsilon * r6inv * (sigma_12 * r6inv - sigma_6);

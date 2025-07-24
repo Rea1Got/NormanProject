@@ -3,7 +3,7 @@ import numpy as np
 import json
 
 NUM_BARS = 30  # number of points on plot
-THERM_BALANCE = 100  # number of first sample after thermodynamic balance 
+THERM_BALANCE = 10  # number of first sample after thermodynamic balance 
 EXCLUDE_LAST = 5  # exclude last EXCLUDE_LAST points
 BOLTZMANN = 1.38069E-23
 
@@ -71,6 +71,7 @@ ss_res = np.sum((y_log - y_pred)**2)
 ss_tot = np.sum((y_log - np.mean(y_log))**2)
 r_squared = 1 - (ss_res / ss_tot)
 
+########################################################################## 
 print(f"Аппроксимация: ln(y) = {k:.6f}x + {b:.6f}")
 print(f"Экспонента: y = {np.exp(b):.6f} * exp({k:.6f}x)")
 print(f"R² = {r_squared:.6f}")
@@ -79,12 +80,13 @@ physical_temp = v2_mean * (epsilone_real / BOLTZMANN)
 print(f"Физическая температура = {physical_temp:.6f} K")
 avg_kinetic_energy = np.mean(kinetic_energy_per_step)
 print(f"Средняя кинетическая энергия системы: {avg_kinetic_energy:.2f} безразм. ед.")
-##############################
-k_B_corrected = - m_real / (2 * k * physical_temp)
-print(f"\nПостоянная Больцмана: {k_B_corrected:.6e} Дж/К")
 
-error_pct = abs(k_B_corrected - BOLTZMANN) / BOLTZMANN * 100
-print(f"Погрешность: {error_pct:.6f}%")
+print(f"\nЦелевая постоянная Больцмана: {BOLTZMANN:.4e} Дж/К")
+k_B_corrected = - m_real / (2 * k * physical_temp)
+print(f"Постоянная Больцмана: {k_B_corrected:.6e} Дж/К")
+
+# error_pct = abs(k_B_corrected - BOLTZMANN) / BOLTZMANN * 100
+# print(f"Погрешность: {error_pct:.6f}%")
 ########################################################################## 
 
 kinetic_energy_per_step = []

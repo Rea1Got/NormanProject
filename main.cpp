@@ -27,15 +27,19 @@ int main() {
   double x = cfg["length_x"];
   double y = cfg["length_y"];
   double z = cfg["length_z"];
+  double density = cfg["density"];
+  double mass_real = cfg["mass_real"];
+  double sigma_real = cfg["sigma_real"];
 
-  Volume volume(num_molecules, seed, temperature, r_cut, sigma, epsilon, x, y,
-                z);
+  Volume volume(num_molecules, seed, density, mass_real, sigma_real,
+                temperature, r_cut, sigma, epsilon);
   Space &space = volume.get_space();
 
   std::cout << "===== Начало симуляции =====\n";
   std::cout << "Молекул: " << num_molecules << "\n";
   std::cout << "Шаг по времени: " << dt << "\n";
-  std::cout << "Температура: " << temperature << "\n\n";
+  std::cout << "Температура: " << temperature << "\n";
+  std::cout << "Длина объема: " << volume.get_length_x() << "\n\n";
 
   for (int step = 0; step <= total_steps; step++) {
     auto force = volume.calculate_force();
