@@ -18,5 +18,7 @@ void Molecule::print_full_information() const {
   print_id();
   print_coordinate();
   print_velocity();
+  std::cout << "Coord_abs { " << coordinate_abs[0] << "; " << coordinate_abs[1]
+            << "; " << coordinate_abs[2] << " }\n";
   std::cout << std::endl;
 }

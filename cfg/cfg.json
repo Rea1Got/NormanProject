@@ -1,9 +1,10 @@
 {
     "_comment": "r_cut and length_i are in sigma units",
     "_comment": "dencity in SI units",
-    "velocity_file": "tmp/velocity_500.txt",
-    "seed": 1,
-    "num_molecules": 500,
+    "velocity_file": "tmp/100_300K.txt",
+    "coord_abs_file": "tmp/100_300K_c.txt",
+    "seed": 5,
+    "num_molecules": 100,
     "dt": 0.001,
     "total_steps": 300000,
     "mass": 1,

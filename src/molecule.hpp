@@ -9,6 +9,7 @@ private:
   double mass = 1;
   std::array<double, 3> coordinate = {0.0, 0.0, 0.0};
   std::array<double, 3> coordinate_prev = {0.0, 0.0, 0.0};
+  std::array<double, 3> coordinate_abs = {0.0, 0.0, 0.0};
   std::array<double, 3> velocity = {0.0, 0.0, 0.0};
 
 public:
@@ -17,7 +18,7 @@ public:
            const std::array<double, 3> &coord_prev,
            const std::array<double, 3> &veloc)
       : id(id), mass(mass), coordinate(coord), coordinate_prev(coord_prev),
-        velocity(veloc) {};
+        coordinate_abs(coord), velocity(veloc) {};
 
   void print_id() const;
   void print_mass() const;
@@ -31,6 +32,9 @@ public:
   const std::array<double, 3> &get_coordinate_prev() const {
     return coordinate_prev;
   }
+  const std::array<double, 3> &get_coordinate_abs() const {
+    return coordinate_abs;
+  }
   const std::array<double, 3> &get_velocity() const { return velocity; }
 
   void set_id(unsigned int new_id) { id = new_id; }
@@ -40,6 +44,9 @@ public:
   };
   void set_coordinate_prev(std::array<double, 3> &new_coordinate) {
     coordinate_prev = new_coordinate;
+  }
+  void set_coordinate_abs(std::array<double, 3> &new_coordinate) {
+    coordinate_abs = new_coordinate;
   }
   void set_velocity(std::array<double, 3> &new_velocity) {
     velocity = new_velocity;

@@ -64,8 +64,9 @@ private:
 
           auto &curr_mol = space.get_molecule(count);
           std::array<double, 3> coord = {i * dx, j * dy, k * dz};
+          std::array<double, 3> coord_abs_init = {0.0, 0.0, 0.0};
           curr_mol.set_coordinate(coord);
-
+          curr_mol.set_coordinate_abs(coord_abs_init);
           count++;
         }
       }
@@ -97,7 +98,7 @@ private:
   void validate_parameters() {
     double V_star = length_x * length_y * length_z;
     double rho_star = space.get_amount_of_molecules() / V_star;
-    if (rho_star < 0.7 || rho_star > 1.0) {
+    if (rho_star < 0.7 || rho_star > 1.2) {
       std::cerr << "WARNING: Unusual density: " << rho_star
                 << " (expected 0.8-0.9 for liquid Ar)\n";
     }
@@ -206,6 +207,8 @@ public:
     std::array<double, 3> coordinates_new;
     std::array<double, 3> coordinates;
     std::array<double, 3> coordinates_prev;
+    std::array<double, 3> coordinates_abs;
+    std::array<double, 3> coordinates_abs_new;
     std::array<double, 3> velocity;
     std::array<double, 3> velocity_curr;
     double mass = 1.0;
@@ -217,12 +220,16 @@ public:
       mass = molecule.get_mass();
       coordinates = molecule.get_coordinate();
       coordinates_prev = molecule.get_coordinate_prev();
+      coordinates_abs = molecule.get_coordinate_abs();
       velocity_curr = molecule.get_velocity();
 
       for (int j = 0; j < 3; j++) {
         acceleration = force[i][j] / mass;
         coordinates_new[j] =
             2 * coordinates[j] - coordinates_prev[j] + acceleration * dt * dt;
+
+        coordinates_abs_new[j] =
+            coordinates_abs[j] + coordinates_new[j] - coordinates_prev[j];
 
         double volume_len = get_length(j);
         adjust_coordinate(coordinates_new[j], volume_len);
@@ -240,6 +247,7 @@ public:
       }
       molecule.set_coordinate_prev(coordinates);
       molecule.set_coordinate(coordinates_new);
+      molecule.set_coordinate_abs(coordinates_abs_new);
       molecule.set_velocity(velocity);
     }
 

@@ -92,6 +92,21 @@ public:
     f_mol_vel.close();
   }
 
+  void write_coord_abs(std::string file) {
+    // create folder if needed
+    std::filesystem::create_directories(
+        std::filesystem::path(file).parent_path());
+
+    std::ofstream f_coord_abs(file, std::ios::app);
+    for (int i = 0; i < get_amount_of_molecules(); i++) {
+      for (int j = 0; j < 3; j++) {
+        f_coord_abs << get_molecule(i).get_coordinate_abs()[j] << " ";
+      }
+    }
+    f_coord_abs << "\n";
+    f_coord_abs.close();
+  }
+
   void impulse_print() {
     std::array<double, 3> v = {0, 0, 0};
     for (int i = 0; i < get_amount_of_molecules(); i++) {

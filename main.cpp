@@ -3,7 +3,6 @@
 #include "src/space.hpp"
 #include "src/volume.hpp"
 #include <cstdlib>
-#include <filesystem>
 #include <iostream>
 #include <string>
 
@@ -15,6 +14,7 @@ int main() {
   cfg_file >> cfg;
 
   std::string velocity_file = cfg["velocity_file"];
+  std::string coord_abs_file = cfg["coord_abs_file"];
   int seed = cfg["seed"];
   int num_molecules = cfg["num_molecules"];
   double temperature = cfg["temperature"];
@@ -49,12 +49,13 @@ int main() {
       std::cout << "Шаг " << step << ":\n";
       std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
       std::cout << "  Полная энергия: " << total_energy << "\n";
-      // for (int i = 0; i < 2; i++) {
-      //   space.get_molecule(i).print_full_information();
-      // }
+      for (int i = 0; i < 2; i++) {
+        space.get_molecule(i).print_full_information();
+      }
       // space.impulse_print();
 
       space.write_velocity(velocity_file);
+      space.write_coord_abs(coord_abs_file);
     }
   }
   std::cout << "===== Симуляция завершена =====\n";
