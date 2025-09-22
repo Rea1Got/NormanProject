@@ -1,15 +1,21 @@
 {
     "_comment": "r_cut and length_i are in sigma units",
     "_comment": "dencity in SI units",
-    "velocity_file": "tmp/100_300K.txt",
-    "coord_abs_file": "tmp/100_300K_c.txt",
+
+    "velocity_file": "tmp/200_300K/simulation/velocity_o.txt", 
+    "coord_file": "tmp/200_300K/simulation/coord_o.txt",
+    "coord_abs_file": "tmp/200_300K/simulation/coord_abs_o.txt",
+
+    "velocity_file_input": "tmp/200_300K/stable_pos/v_input.txt", 
+    "coord_file_input": "tmp/200_300K/stable_pos/c_input.txt",
+
     "seed": 5,
-    "num_molecules": 100,
+    "num_molecules": 200,
     "dt": 0.001,
     "total_steps": 300000,
     "mass": 1,
     "mass_real": 6.633E-26,
-    "density": 1000,
+    "density": 200,
     "temperature": 1,
     "temperature_real": 94.4,
     "r_cut": 2.25,
@@ -17,7 +23,7 @@
     "sigma_real": 3.405E-10,
     "epsilon": 1,
     "epsilon_real": 1.653E-21,
-    "snapshot": 100,
+    "snapshot": 1,
     "length_x": 6.28,
     "length_y": 6.28,
     "length_z": 6.28

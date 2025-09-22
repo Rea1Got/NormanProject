@@ -20,7 +20,7 @@ with open("cfg/cfg.json", "r") as f:
 # Чтение данных координат
 coord_data = np.loadtxt(coord_abs_file)
 T = len(coord_data)  # Общее количество временных точек
-
+print(f"Number of points: {T}")
 # Преобразование данных в массив с размерностью (время, молекулы, координаты)
 trajectory = coord_data.reshape(T, num_molecules, 3)
 
@@ -29,14 +29,13 @@ def linear_func(t, a, b):
     return a * t + b
 
 # Вычисление параметров анализа на основе процентных значений
-window_size = max(100, int(T * WINDOW_SIZE_PERCENT / 100))  # Размер окна
-step_size = max(1, int(window_size * STEP_SIZE_PERCENT / 100))  # Шаг сдвига окна
-max_lag = max(10, int(window_size * MAX_LAG_PERCENT / 100))  # Максимальный лаг для вычисления MSD
+print("Enter window size and step size:")
+window_size = int(input())  # Размер окна
+step_size = int(input())  # Шаг сдвига окна
 
-print(f"Анализ траектории с {T} временными точками и {num_molecules} молекулами")
-print(f"Размер окна: {window_size} точек ({WINDOW_SIZE_PERCENT}% от общего времени)")
-print(f"Шаг сдвига окна: {step_size} точек ({STEP_SIZE_PERCENT}% от размера окна)")
-print(f"Максимальный лаг: {max_lag} точек ({MAX_LAG_PERCENT}% от размера окна)")
+print(f"Analysis of trajectory with {T} time points and {num_molecules} molecules.")
+print(f"Window size: {window_size} points ({window_size * 100 / T}% out of points)")
+print(f"Window step size: {step_size} points ({step_size * 100 / window_size}% out of window size)")
 
 # Массивы для хранения результатов
 diffusion_coeffs = []
@@ -44,44 +43,7 @@ time_values = []
 msd_curves = []
 
 # Анализ для каждого скользящего окна
-for start_idx in range(0, T - window_size, step_size):
-    end_idx = start_idx + window_size
-    window_trajectory = trajectory[start_idx:end_idx]
-    
-    # Вычисление MSD для текущего окна
-    msd = np.zeros(max_lag)
-    
-    for delta_t in range(1, max_lag):
-        # Вычисление смещения для всех пар точек, разделенных delta_t
-        disp = window_trajectory[delta_t:] - window_trajectory[:-delta_t]
-        squared_disp = np.sum(disp**2, axis=2)  # Квадрат смещения для каждой молекулы
-        
-        # Усреднение по молекулам и времени
-        msd[delta_t] = np.mean(squared_disp)
-    
-    # Временная ось 
-    time_lags = np.arange(max_lag) * dt * snapshot
-    
-    # Линейная аппроксимация MSD для вычисления коэффициента диффузии
-    # Используем только часть данных для аппроксимации
-    fit_start = max(MIN_LAG_POINTS, max_lag // 20)  # Начинаем с MIN_LAG_POINTS или 5% от максимального лага
-    fit_end = max_lag - max_lag // 10  # Исключаем последние 10%
 
-    if fit_end <= fit_start:
-        continue
-        
-    try:
-        # Аппроксимация MSD = 6*D*t (для 3D)
-        popt, pcov = curve_fit(linear_func, 
-                              time_lags[fit_start:fit_end], 
-                              msd[fit_start:fit_end])
-        D = popt[0] / 6  # Коэффициент диффузии для 3D
-        diffusion_coeffs.append(D)
-        time_values.append(start_idx * dt * snapshot)
-        msd_curves.append(msd.copy())
-    except Exception as e:
-        print(f"Ошибка аппроксимации для окна {start_idx}: {e}")
-        continue
 
 # Усреднение коэффициентов диффузии
 if diffusion_coeffs:

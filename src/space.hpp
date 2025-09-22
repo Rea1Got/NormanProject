@@ -1,6 +1,7 @@
 #ifndef SPACE_HPP
 #define SPACE_HPP
 
+#include "functions.hpp"
 #include "molecule.hpp"
 #include <cmath>
 #include <cstdlib>
@@ -77,6 +78,39 @@ public:
     }
   }
 
+  void set_velocity(const std::string file) {
+    std::vector<double> vel_data = read_input(file);
+    int num_molecules = get_amount_of_molecules();
+
+    for (int i = 0; i < num_molecules; i++) {
+      std::array<double, 3> tmp = {vel_data[3 * i], vel_data[3 * i + 1],
+                                   vel_data[3 * i + 2]};
+      get_molecule(i).set_velocity(tmp);
+    }
+  }
+
+  void set_coordinate(const std::string file) {
+    std::vector<double> coord_data = read_input(file);
+    std::array<double, 3> zeros = {0.0, 0.0, 0.0};
+    int num_mol = get_amount_of_molecules();
+
+    for (int i = 0; i < num_mol; i++) {
+      Molecule &mol = get_molecule(i);
+      std::array<double, 3> coord_prev = {
+          coord_data[3 * i], coord_data[3 * i + 1], coord_data[3 * i + 2]};
+      mol.set_coordinate_prev(coord_prev);
+      mol.set_coordinate_abs(zeros);
+    }
+
+    for (int i = 0; i < num_mol; i++) {
+      Molecule &mol = get_molecule(i);
+      std::array<double, 3> coord = {coord_data[3 * num_mol + 3 * i],
+                                     coord_data[3 * num_mol + 3 * i + 1],
+                                     coord_data[3 * num_mol + 3 * i + 2]};
+      mol.set_coordinate(coord);
+    }
+  }
+
   void write_velocity(std::string file) {
     // create folder if needed
     std::filesystem::create_directories(
@@ -90,6 +124,21 @@ public:
     }
     f_mol_vel << "\n";
     f_mol_vel.close();
+  }
+
+  void write_coord(std::string file) {
+    // create folder if needed
+    std::filesystem::create_directories(
+        std::filesystem::path(file).parent_path());
+
+    std::ofstream f_coord(file, std::ios::app);
+    for (int i = 0; i < get_amount_of_molecules(); i++) {
+      for (int j = 0; j < 3; j++) {
+        f_coord << get_molecule(i).get_coordinate()[j] << " ";
+      }
+    }
+    f_coord << "\n";
+    f_coord.close();
   }
 
   void write_coord_abs(std::string file) {

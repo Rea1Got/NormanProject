@@ -14,7 +14,10 @@ int main() {
   cfg_file >> cfg;
 
   std::string velocity_file = cfg["velocity_file"];
+  std::string coord_file = cfg["coord_file"];
   std::string coord_abs_file = cfg["coord_abs_file"];
+  std::string velocity_file_input = cfg["velocity_file_input"];
+  std::string coord_file_input = cfg["coord_file_input"];
   int seed = cfg["seed"];
   int num_molecules = cfg["num_molecules"];
   double temperature = cfg["temperature"];
@@ -32,7 +35,10 @@ int main() {
   double sigma_real = cfg["sigma_real"];
 
   Volume volume(num_molecules, seed, density, mass_real, sigma_real,
-                temperature, r_cut, sigma, epsilon);
+                velocity_file_input, coord_file_input, temperature, r_cut,
+                sigma, epsilon);
+  // Volume volume(num_molecules, seed, density, mass_real, sigma_real,
+  //               temperature, r_cut, sigma, epsilon);
   Space &space = volume.get_space();
 
   std::cout << "===== Начало симуляции =====\n";
@@ -42,20 +48,22 @@ int main() {
   std::cout << "Длина объема: " << volume.get_length_x() << "\n\n";
 
   for (int step = 0; step <= total_steps; step++) {
-    auto force = volume.calculate_force();
-    auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
-
-    if (step % snapshot == 0) {
+    space.write_velocity(velocity_file);
+    space.write_coord_abs(coord_abs_file);
+    space.write_coord(coord_file);
+    if (step % 1000 == 0) {
       std::cout << "Шаг " << step << ":\n";
-      std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
-      std::cout << "  Полная энергия: " << total_energy << "\n";
-      for (int i = 0; i < 2; i++) {
+      for (int i = 0; i < std::min(2, num_molecules); i++) {
         space.get_molecule(i).print_full_information();
       }
       // space.impulse_print();
+    }
 
-      space.write_velocity(velocity_file);
-      space.write_coord_abs(coord_abs_file);
+    auto force = volume.calculate_force();
+    auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
+    if (step % 1000 == 0) {
+      std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
+      std::cout << "  Полная энергия: " << total_energy << "\n";
     }
   }
   std::cout << "===== Симуляция завершена =====\n";
