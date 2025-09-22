@@ -47,23 +47,23 @@ int main() {
   std::cout << "Температура: " << temperature << "\n";
   std::cout << "Длина объема: " << volume.get_length_x() << "\n\n";
 
-  for (int step = 0; step <= total_steps; step++) {
-    space.write_velocity(velocity_file);
+  for (int step = 0; step < total_steps; step++) {
     space.write_coord_abs(coord_abs_file);
-    space.write_coord(coord_file);
-    if (step % 1000 == 0) {
+    // space.write_coord(coord_file);
+    if (step % snapshot == 0) {
       std::cout << "Шаг " << step << ":\n";
-      for (int i = 0; i < std::min(2, num_molecules); i++) {
-        space.get_molecule(i).print_full_information();
-      }
+      // for (int i = 0; i < std::min(2, num_molecules); i++) {
+      //   space.get_molecule(i).print_full_information();
+      // }
       // space.impulse_print();
+      space.write_velocity(velocity_file);
     }
 
     auto force = volume.calculate_force();
     auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
-    if (step % 1000 == 0) {
+    if (step % snapshot == 0) {
       std::cout << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
-      std::cout << "  Полная энергия: " << total_energy << "\n";
+      std::cout << "  Полная энергия: " << total_energy << "\n\n";
     }
   }
   std::cout << "===== Симуляция завершена =====\n";

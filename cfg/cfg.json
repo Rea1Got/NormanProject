@@ -6,10 +6,10 @@
     "coord_file": "tmp/200_300K/simulation/coord_o.txt",
     "coord_abs_file": "tmp/200_300K/simulation/coord_abs_o.txt",
 
-    "velocity_file_input": "tmp/200_300K/stable_pos/v_input.txt", 
-    "coord_file_input": "tmp/200_300K/stable_pos/c_input.txt",
+    "velocity_file_input": "tmp/200_300K/stable_pos/v_200_100K.txt", 
+    "coord_file_input": "tmp/200_300K/stable_pos/c_200_100K.txt",
 
-    "seed": 5,
+    "seed": 3,
     "num_molecules": 200,
     "dt": 0.001,
     "total_steps": 300000,
@@ -23,7 +23,7 @@
     "sigma_real": 3.405E-10,
     "epsilon": 1,
     "epsilon_real": 1.653E-21,
-    "snapshot": 1,
+    "snapshot": 300,
     "length_x": 6.28,
     "length_y": 6.28,
     "length_z": 6.28

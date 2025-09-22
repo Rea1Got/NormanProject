@@ -3,8 +3,7 @@ import numpy as np
 import json
 
 NUM_BARS = 40  # number of points on plot
-THERM_BALANCE = 150  # number of first sample after thermodynamic balance 
-EXCLUDE_LAST = 15  # exclude last EXCLUDE_LAST points
+EXCLUDE_LAST = 10  # exclude last EXCLUDE_LAST points
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
@@ -13,14 +12,13 @@ with open("cfg/cfg.json", "r") as f:
     m_real = cfg["mass_real"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
-    snapshot = cfg["snapshot"]
     f.close()
 
 data_generated = np.loadtxt(file_data)
 vel_coord_2 = [[], [], []]
 velocity = []
 kinetic_energy_per_step = []
-for i in range(THERM_BALANCE, len(data_generated)):
+for i in range(0, len(data_generated)):
     step_energy = 0
     for j in range(0, len(data_generated[i]), 3):
         velocity.append(np.sqrt(data_generated[i][j]**2 + data_generated[i][j+1]**2 + data_generated[i][j+2]**2))
@@ -139,7 +137,7 @@ fig.suptitle('Распределения скоростей молекул', fon
 plt.savefig('velocity_plot.png')
 plt.show()
 ########################################################################## 
-print('Clear file ' + file_data + ': y/n?')
-if (input().lower() == 'y'):
-    with open(file_data, 'w') as file:
-        file = ''
+# print('Clear file ' + file_data + ': y/n?')
+# if (input().lower() == 'y'):
+#     with open(file_data, 'w') as file:
+#         file = ''
