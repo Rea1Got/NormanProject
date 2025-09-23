@@ -3,12 +3,6 @@ import numpy as np
 import json
 from scipy.optimize import curve_fit
 
-WINDOW_SIZE_PERCENT = 1  # Размер окна в процентах от общего времени (рекомендуется 5-20%)
-STEP_SIZE_PERCENT = 5   # Шаг сдвига окна в процентах от размера окна (рекомендуется 5-20%)
-MAX_LAG_PERCENT = 50      # Максимальный лаг в процентах от размера окна (рекомендуется 10-30%)
-MIN_LAG_POINTS = 5        # Минимальное количество точек для аппроксимации
-
-# Загрузка конфигурации
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
     coord_abs_file = cfg["coord_abs_file"]
@@ -17,122 +11,96 @@ with open("cfg/cfg.json", "r") as f:
     snapshot = cfg["snapshot"]
     dt = cfg["dt"]
 
-# Чтение данных координат
 coord_data = np.loadtxt(coord_abs_file)
-T = len(coord_data)  # Общее количество временных точек
-
-# Преобразование данных в массив с размерностью (время, молекулы, координаты)
+T = len(coord_data)  # num of time points
+print(f"Number of points: {T}")
 trajectory = coord_data.reshape(T, num_molecules, 3)
 
 # Функция для линейной аппроксимации
 def linear_func(t, a, b):
     return a * t + b
 
-# Вычисление параметров анализа на основе процентных значений
-window_size = max(100, int(T * WINDOW_SIZE_PERCENT / 100))  # Размер окна
-step_size = max(1, int(window_size * STEP_SIZE_PERCENT / 100))  # Шаг сдвига окна
-max_lag = max(10, int(window_size * MAX_LAG_PERCENT / 100))  # Максимальный лаг для вычисления MSD
+print("Enter window size and step size:")
+window_size = int(input("Window size: "))  
+step_size = int(input("Step size: ")) 
 
-print(f"Анализ траектории с {T} временными точками и {num_molecules} молекулами")
-print(f"Размер окна: {window_size} точек ({WINDOW_SIZE_PERCENT}% от общего времени)")
-print(f"Шаг сдвига окна: {step_size} точек ({STEP_SIZE_PERCENT}% от размера окна)")
-print(f"Максимальный лаг: {max_lag} точек ({MAX_LAG_PERCENT}% от размера окна)")
+print(f"Analysis of trajectory with {T} time points and {num_molecules} molecules.")
+print(f"Window size: {window_size} points ({window_size * 100 / T}% out of points)")
+print(f"Window step size: {step_size} points ({step_size * 100 / window_size}% out of window size)")
 
-# Массивы для хранения результатов
-diffusion_coeffs = []
-time_values = []
-msd_curves = []
 
-# Анализ для каждого скользящего окна
-for start_idx in range(0, T - window_size, step_size):
+
+# Анали здля каждого скользящего окна
+def compute_msd_in_window(window_trajectory):
+    """
+    Вычисляет MSD для временного окна траектории
+    window_trajectory: массив формы (window_size, num_molecules, 3)
+    Возвращает: массив MSD для каждого временного лага в окне
+    """
+    window_length = window_trajectory.shape[0]
+    msd = np.zeros(window_length)
+    
+    for tau in range(window_length):
+        if tau == 0:
+            msd[tau] = 0.0  
+        else:
+            displacements = window_trajectory[tau:] - window_trajectory[:-tau]
+            squared_distances = np.sum(displacements**2, axis=2)
+            msd[tau] = np.mean(squared_distances)
+    
+    return msd
+
+msd_results = []
+for start_idx in range(0, T - window_size + 1, step_size):
     end_idx = start_idx + window_size
-    window_trajectory = trajectory[start_idx:end_idx]
     
-    # Вычисление MSD для текущего окна
-    msd = np.zeros(max_lag)
+    window_traj = trajectory[start_idx:end_idx]
+    window_msd = compute_msd_in_window(window_traj)
+    msd_results.append(window_msd)
     
-    for delta_t in range(1, max_lag):
-        # Вычисление смещения для всех пар точек, разделенных delta_t
-        disp = window_trajectory[delta_t:] - window_trajectory[:-delta_t]
-        squared_disp = np.sum(disp**2, axis=2)  # Квадрат смещения для каждой молекулы
-        
-        # Усреднение по молекулам и времени
-        msd[delta_t] = np.mean(squared_disp)
-    
-    # Временная ось 
-    time_lags = np.arange(max_lag) * dt * snapshot
-    
-    # Линейная аппроксимация MSD для вычисления коэффициента диффузии
-    # Используем только часть данных для аппроксимации
-    fit_start = max(MIN_LAG_POINTS, max_lag // 20)  # Начинаем с MIN_LAG_POINTS или 5% от максимального лага
-    fit_end = max_lag - max_lag // 10  # Исключаем последние 10%
+    if (start_idx // step_size) % 10 == 0:
+        print(f"Processed window starting at {start_idx}")
 
-    if fit_end <= fit_start:
-        continue
-        
-    try:
-        # Аппроксимация MSD = 6*D*t (для 3D)
-        popt, pcov = curve_fit(linear_func, 
-                              time_lags[fit_start:fit_end], 
-                              msd[fit_start:fit_end])
-        D = popt[0] / 6  # Коэффициент диффузии для 3D
-        diffusion_coeffs.append(D)
-        time_values.append(start_idx * dt * snapshot)
-        msd_curves.append(msd.copy())
-    except Exception as e:
-        print(f"Ошибка аппроксимации для окна {start_idx}: {e}")
-        continue
+msd_results = np.array(msd_results)
+print(f"MSD results shape: {msd_results.shape}")  # (number_of_window, window_size)
 
-# Усреднение коэффициентов диффузии
-if diffusion_coeffs:
-    avg_D = np.mean(diffusion_coeffs)
-    std_D = np.std(diffusion_coeffs)
-    print(f"Средний коэффициент диффузии: {avg_D:.4e} ± {std_D:.4e}")
-    print(f"Относительная погрешность: {std_D/avg_D*100:.5}%") 
-    # Визуализация результатов
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    
-    # График 1: Распределение коэффициентов диффузии
-    ax1.hist(diffusion_coeffs, bins=20, alpha=0.7, edgecolor='black')
-    ax1.axvline(avg_D, color='r', linestyle='--', label=f'Среднее: {avg_D:.4e}')
-    ax1.set_xlabel('Коэффициент диффузии')
-    ax1.set_ylabel('Частота')
-    ax1.set_title('Распределение коэффициентов диффузии по скользящим окнам')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    
-    # График 2: MSD кривые для нескольких окон
-    colors = plt.cm.viridis(np.linspace(0, 1, min(5, len(msd_curves))))
-    for i, msd in enumerate(msd_curves[-6:-1]):
-        time_lags = np.arange(len(msd)) * dt * snapshot
-        ax2.plot(time_lags[1:], msd[1:], color=colors[i], alpha=0.7, 
-                label=f'Окно {i+1}, D={diffusion_coeffs[i]:.2e}')
-    
-    # Добавляем теоретическую линию для среднего коэффициента диффузии
-    theoretical_msd = 6 * avg_D * time_lags
-    ax2.plot(time_lags, theoretical_msd, 'r--', linewidth=2, 
-            label=f'Теоретическая (D={avg_D:.2e})')
-    
-    ax2.set_xlabel('Время')
-    ax2.set_ylabel('MSD')
-    ax2.set_title('Кривые MSD для различных окон')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
-    
-    # Дополнительный анализ: зависимость коэффициента диффузии от времени
-    plt.figure(figsize=(10, 6))
-    plt.plot(time_values, diffusion_coeffs, 'o-', alpha=0.7)
-    plt.axhline(avg_D, color='r', linestyle='--', label=f'Среднее: {avg_D:.4e}')
-    plt.xlabel('Время начала окна')
-    plt.ylabel('Коэффициент диффузии')
-    plt.title('Зависимость коэффициента диффузии от времени начала окна')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-    
-else:
-    print("Не удалось вычислить коэффициент диффузии")
+average_msd_per_tau = np.mean(msd_results, axis=0)
+print(f"Average MSD per tau shape: {average_msd_per_tau.shape}")
+
+print("\nMSD for first 10 time lags (averaged over all windows):")
+for tau in range(min(10, window_size)):
+    print(f"tau = {tau}: MSD = {average_msd_per_tau[tau]:.6f}")
+
+tau = [i for i in range(window_size)]
+avg_D = [average_msd_per_tau[i]/(6*i) for i in range(1, window_size)]
+avg_D = np.array(avg_D)
+std_D = avg_D.std()
+calculated_D = avg_D.mean()
+print(f"Средний коэффициент диффузии: {calculated_D:.4e} ± {std_D:.4e}")
+print(f"Относительная погрешность: {std_D/calculated_D*100:.5}%") 
+
+
+# Визуализация результатов
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+
+ax1.hist(avg_D, bins=20, alpha=0.7, edgecolor='black')
+ax1.axvline(calculated_D, color='r', linestyle='--', label=f'Среднее: {calculated_D:.4e}')
+ax1.set_xlabel('Коэффициент диффузии')
+ax1.set_ylabel('Частота')
+ax1.set_title('Распределение коэффициентов диффузии по окнам')
+ax1.legend()
+ax1.grid(True, alpha=0.3)
+############
+theoretical_msd = [6 * calculated_D * i for i in range(window_size)] 
+
+ax2.plot(tau, average_msd_per_tau, 'o', alpha=0.7)
+ax2.plot(tau, theoretical_msd, 'r--', linewidth=2, 
+            label=f'Рассчитанная (D={calculated_D:.2e})')
+ax2.set_xlabel('Количество шагов')
+ax2.set_ylabel('MSD')
+ax2.set_title('Зависимость MSD от времени в пределах окна')
+ax2.grid(True, alpha=0.3)
+ax2.legend()
+plt.tight_layout()
+plt.show()
