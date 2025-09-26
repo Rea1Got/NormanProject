@@ -1,5 +1,5 @@
 #ifndef FUNCTIONS_HPP
-#define FUNCTIONS_HPP
+#define FUNCTIONS_HPP 1
 #include <fstream>
 #include <iostream>
 #include <string>

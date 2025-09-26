@@ -16,10 +16,6 @@ T = len(coord_data)  # num of time points
 print(f"Number of points: {T}")
 trajectory = coord_data.reshape(T, num_molecules, 3)
 
-# Функция для линейной аппроксимации
-def linear_func(t, a, b):
-    return a * t + b
-
 print("Enter window size and step size:")
 window_size = int(input("Window size: "))  
 step_size = int(input("Step size: ")) 
@@ -28,9 +24,7 @@ print(f"Analysis of trajectory with {T} time points and {num_molecules} molecule
 print(f"Window size: {window_size} points ({window_size * 100 / T}% out of points)")
 print(f"Window step size: {step_size} points ({step_size * 100 / window_size}% out of window size)")
 
-
-
-# Анали здля каждого скользящего окна
+############
 def compute_msd_in_window(window_trajectory):
     """
     Вычисляет MSD для временного окна траектории
@@ -44,10 +38,11 @@ def compute_msd_in_window(window_trajectory):
         if tau == 0:
             msd[tau] = 0.0  
         else:
-            displacements = window_trajectory[tau:] - window_trajectory[:-tau]
-            squared_distances = np.sum(displacements**2, axis=2)
-            msd[tau] = np.mean(squared_distances)
-    
+            # displacements = window_trajectory[tau:] - window_trajectory[:-tau]
+            # squared_distances = np.sum(displacements**2, axis=2)
+            displacements = window_trajectory[tau, :, :] - window_trajectory[0, :, :]
+            msd[tau] = np.mean(displacements**2)
+
     return msd
 
 msd_results = []
@@ -58,9 +53,10 @@ for start_idx in range(0, T - window_size + 1, step_size):
     window_msd = compute_msd_in_window(window_traj)
     msd_results.append(window_msd)
     
-    if (start_idx // step_size) % 10 == 0:
-        print(f"Processed window starting at {start_idx}")
+    if (start_idx // (T - window_size + 1)) % 100 == 0:
+        print(f"Completed: {start_idx/(T - window_size + 1) * 100:.1f}%")
 
+############
 msd_results = np.array(msd_results)
 print(f"MSD results shape: {msd_results.shape}")  # (number_of_window, window_size)
 
@@ -80,18 +76,17 @@ print(f"Средний коэффициент диффузии: {calculated_D:.4
 print(f"Относительная погрешность: {std_D/calculated_D*100:.5}%") 
 
 
-# Визуализация результатов
-
+############ 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-ax1.hist(avg_D, bins=20, alpha=0.7, edgecolor='black')
+weights = [x/sum(avg_D) for x in avg_D]
+ax1.hist(avg_D, bins=20, alpha=0.7, edgecolor='black', weights = weights)
 ax1.axvline(calculated_D, color='r', linestyle='--', label=f'Среднее: {calculated_D:.4e}')
 ax1.set_xlabel('Коэффициент диффузии')
 ax1.set_ylabel('Частота')
 ax1.set_title('Распределение коэффициентов диффузии по окнам')
 ax1.legend()
 ax1.grid(True, alpha=0.3)
-############
+########
 theoretical_msd = [6 * calculated_D * i for i in range(window_size)] 
 
 ax2.plot(tau, average_msd_per_tau, 'o', alpha=0.7)

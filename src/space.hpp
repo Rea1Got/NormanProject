@@ -1,6 +1,7 @@
 #ifndef SPACE_HPP
-#define SPACE_HPP
+#define SPACE_HPP 1
 
+#include "../include/json.hpp"
 #include "functions.hpp"
 #include "molecule.hpp"
 #include <cmath>
@@ -13,6 +14,7 @@
 class Space {
 private:
   std::vector<Molecule> molecules;
+  double dt;
 
 public:
   Space() = default;
@@ -24,17 +26,51 @@ public:
       molecules.back().set_id(i);
       molecules.back().set_mass(mass);
     }
+    std::ifstream cfg_file("cfg/cfg.json");
+    nlohmann::json cfg;
+    cfg_file >> cfg;
+    dt = cfg["dt"];
   }
 
   Space(std::vector<Molecule> init_molecules) : molecules(init_molecules) {};
 
   Molecule &get_molecule(int index) { return molecules[index]; }
   const Molecule &get_molecule(int index) const { return molecules[index]; }
+  const double get_total_mass() const {
+    double mass = 0.0;
+    for (int i = 0; i < molecules.size(); i++) {
+      mass += molecules[i].get_mass();
+    }
+    return mass;
+  }
 
   int get_amount_of_molecules() { return molecules.size(); }
   void change_molecules(const std::vector<Molecule> &new_molecules) {
     molecules = new_molecules;
   };
+
+  void rescale_velocity(std::array<double, 3> total_vel, double temperature) {
+    std::array<double, 3> total_vel_2 = {total_vel[0] * total_vel[0],
+                                         total_vel[1] * total_vel[1],
+                                         total_vel[2] * total_vel[2]};
+    std::array<double, 3> rescale_coef{std::sqrt(temperature / total_vel_2[0]),
+                                       std::sqrt(temperature / total_vel_2[1]),
+                                       std::sqrt(temperature / total_vel_2[2])};
+
+    for (int i = 0; i < molecules.size(); i++) {
+      Molecule &mol = molecules[i];
+      std::array<double, 3> coordinates_prev;
+      std::array<double, 3> coordinates = mol.get_coordinate();
+      std::array<double, 3> vel = mol.get_velocity();
+      for (int j = 0; j < 3; j++) {
+        vel[j] = (vel[j] - total_vel[j]) * rescale_coef[j];
+        coordinates_prev[j] = coordinates[j] - vel[j] * dt;
+      }
+
+      mol.set_coordinate_prev(coordinates_prev);
+      mol.set_velocity(vel);
+    }
+  }
 
   void remove_total_momentum(double temperature, double dt = 0.001) {
     if (molecules.empty())
@@ -46,7 +82,7 @@ public:
 
     for (int i = 0; i < num_mol; i++) {
       Molecule &mol = molecules[i];
-      auto vel = mol.get_velocity();
+      std::array<double, 3> vel = mol.get_velocity();
       for (int j = 0; j < 3; j++) {
         total_velocity[j] += vel[j];
         total_velocity_2[j] += vel[j] * vel[j];
@@ -57,25 +93,7 @@ public:
       total_velocity[i] /= num_mol;
       total_velocity_2[i] /= num_mol;
     }
-
-    std::array<double, 3> rescale_velocity{
-        std::sqrt(temperature / total_velocity_2[0]),
-        std::sqrt(temperature / total_velocity_2[1]),
-        std::sqrt(temperature / total_velocity_2[2])};
-
-    for (int i = 0; i < num_mol; i++) {
-      Molecule &mol = molecules[i];
-      std::array<double, 3> coordinates_prev;
-      std::array<double, 3> coordinates = mol.get_coordinate();
-      std::array<double, 3> vel = mol.get_velocity();
-      for (int j = 0; j < 3; j++) {
-        vel[j] = (vel[j] - total_velocity[j]) * rescale_velocity[j];
-        coordinates_prev[j] = coordinates[j] - vel[j] * dt;
-      }
-
-      mol.set_coordinate_prev(coordinates_prev);
-      mol.set_velocity(vel);
-    }
+    rescale_velocity(total_velocity, temperature);
   }
 
   void set_velocity(const std::string file) {

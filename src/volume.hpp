@@ -1,5 +1,5 @@
 #ifndef VOLUME_HPP
-#define VOLUME_HPP
+#define VOLUME_HPP 1
 
 #include "space.hpp"
 #include <iostream>
@@ -84,17 +84,26 @@ private:
     }
   }
 
-  void init_density(double density_SI) {
-    double total_mass_SI = space.get_amount_of_molecules() * mass_real;
-    double volume_SI = total_mass_SI / density_SI;
-    double length_SI = std::pow(volume_SI, 1.0 / 3.0);
-    double length = length_SI / sigma_real;
+  // void init_density(double density_SI) {
+  //   double total_mass_SI = space.get_amount_of_molecules() * mass_real;
+  //   double volume_SI = total_mass_SI / density_SI;
+  //   double length_SI = std::pow(volume_SI, 1.0 / 3.0);
+  //   double length = length_SI / sigma_real;
+  //
+  //   length_x = length;
+  //   length_y = length;
+  //   length_z = length;
+  //
+  //   validate_parameters();
+  // }
 
+  void init_density(double density) { // if mass is the same in all mol
+    double total_mass = space.get_total_mass();
+    double volume = total_mass / density;
+    double length = std::pow(volume, 1.0 / 3.0);
     length_x = length;
     length_y = length;
     length_z = length;
-
-    validate_parameters();
   }
 
   void validate_parameters() {
@@ -258,7 +267,7 @@ public:
             2 * coordinates[j] - coordinates_prev[j] + acceleration * dt * dt;
 
         coordinates_abs_new[j] =
-            coordinates_abs[j] + coordinates_new[j] - coordinates_prev[j];
+            coordinates_abs[j] + coordinates_new[j] - coordinates[j];
 
         double volume_len = get_length(j);
         adjust_coordinate(coordinates_new[j], volume_len);

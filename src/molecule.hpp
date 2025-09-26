@@ -1,5 +1,5 @@
 #ifndef MOLECULE_HPP
-#define MOLECULE_HPP
+#define MOLECULE_HPP 1
 
 #include <array>
 
