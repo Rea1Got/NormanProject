@@ -18,7 +18,8 @@ trajectory = coord_data.reshape(T, num_molecules, 3)
 
 print("Enter window size and step size:")
 window_size = int(input("Window size: "))  
-step_size = int(input("Step size: ")) 
+step_size = int(input("Step size: "))
+cut_index = int(input("Cut first points: "))
 
 print(f"Analysis of trajectory with {T} time points and {num_molecules} molecules.")
 print(f"Window size: {window_size} points ({window_size * 100 / T}% out of points)")
@@ -61,19 +62,23 @@ msd_results = np.array(msd_results)
 print(f"MSD results shape: {msd_results.shape}")  # (number_of_window, window_size)
 
 average_msd_per_tau = np.mean(msd_results, axis=0)
+
+# cut_index = 200 
+average_msd_per_tau = average_msd_per_tau[cut_index:]
+tau = np.arange(cut_index, window_size)
+
 print(f"Average MSD per tau shape: {average_msd_per_tau.shape}")
 
-print("\nMSD for first 10 time lags (averaged over all windows):")
-for tau in range(min(10, window_size)):
-    print(f"tau = {tau}: MSD = {average_msd_per_tau[tau]:.6f}")
+print("\nMSD for first 10 time lags after cut (averaged over all windows):")
+for i, tau_val in enumerate(tau[:10]):
+    print(f"tau = {tau_val}: MSD = {average_msd_per_tau[i]:.6f}")
 
-tau = [i for i in range(window_size)]
-avg_D = [average_msd_per_tau[i]/(6*i) for i in range(1, window_size)]
-avg_D = np.array(avg_D)
+avg_D = average_msd_per_tau / (6 * tau)
 std_D = avg_D.std()
 calculated_D = avg_D.mean()
+
 print(f"Средний коэффициент диффузии: {calculated_D:.4e} ± {std_D:.4e}")
-print(f"Относительная погрешность: {std_D/calculated_D*100:.5}%") 
+print(f"Относительная погрешность: {std_D/calculated_D*100:.5f}%")
 
 
 ############ 
@@ -87,7 +92,7 @@ ax1.set_title('Распределение коэффициентов диффу�
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 ########
-theoretical_msd = [6 * calculated_D * i for i in range(window_size)] 
+theoretical_msd = [6 * calculated_D * t for t in tau]
 
 ax2.plot(tau, average_msd_per_tau, 'o', alpha=0.7)
 ax2.plot(tau, theoretical_msd, 'r--', linewidth=2, 

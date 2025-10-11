@@ -179,7 +179,7 @@ public:
     space.set_velocity(f_vel);
     space.set_coordinate(f_coord);
     init_density(density_SI);
-    space.remove_total_momentum(temperature);
+    // space.remove_total_momentum(temperature);
   }
 
   double potential_energy(double r2inv) {
@@ -266,21 +266,19 @@ public:
         coordinates_new[j] =
             2 * coordinates[j] - coordinates_prev[j] + acceleration * dt * dt;
 
-        coordinates_abs_new[j] =
-            coordinates_abs[j] + coordinates_new[j] - coordinates[j];
-
         double volume_len = get_length(j);
         adjust_coordinate(coordinates_new[j], volume_len);
 
-        // Minimum Image Convention
         double delta_r = coordinates_new[j] - coordinates_prev[j];
         if (delta_r > 0.5 * volume_len) {
           delta_r -= volume_len;
         } else if (delta_r < -0.5 * volume_len) {
           delta_r += volume_len;
         }
-        velocity[j] = delta_r / (2 * dt);
 
+        coordinates_abs_new[j] = coordinates_abs[j] + delta_r;
+
+        velocity[j] = delta_r / (2 * dt);
         kinetic_energy += 0.5 * mass * velocity[j] * velocity[j];
       }
       molecule.set_coordinate_prev(coordinates);
