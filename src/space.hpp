@@ -72,12 +72,11 @@ public:
     }
   }
 
-  void remove_total_momentum(double temperature, double dt = 0.001) {
+  void remove_total_momentum(double temperature) {
     if (molecules.empty())
       return;
 
     std::array<double, 3> total_velocity = {0, 0, 0};
-    std::array<double, 3> total_velocity_2 = {0, 0, 0};
     int num_mol = molecules.size();
 
     for (int i = 0; i < num_mol; i++) {
@@ -85,13 +84,11 @@ public:
       std::array<double, 3> vel = mol.get_velocity();
       for (int j = 0; j < 3; j++) {
         total_velocity[j] += vel[j];
-        total_velocity_2[j] += vel[j] * vel[j];
       }
     }
 
     for (int i = 0; i < 3; i++) {
       total_velocity[i] /= num_mol;
-      total_velocity_2[i] /= num_mol;
     }
     rescale_velocity(total_velocity, temperature);
   }

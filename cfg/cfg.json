@@ -9,7 +9,7 @@
     "velocity_file_input": "tmp/200_300K/init_modeling/velocity_o.txt", 
     "coord_file_input": "tmp/200_300K/init_modeling/coord_o.txt",
 
-    "seed": 3,
+    "seed": 1,
     "num_molecules": 200,
     "dt": 0.0005,
     "total_steps": 200000,
@@ -23,8 +23,5 @@
     "sigma_real": 3.405E-10,
     "epsilon": 1,
     "epsilon_real": 1.653E-21,
-    "snapshot": 300,
-    "length_x": 6.28,
-    "length_y": 6.28,
-    "length_z": 6.28
+    "snapshot": 300
 }

@@ -3,7 +3,7 @@ import numpy as np
 import json
 
 NUM_BARS = 40  # number of points on plot
-EXCLUDE_LAST = 10  # exclude last EXCLUDE_LAST points
+EXCLUDE_LAST = 20  # exclude last EXCLUDE_LAST points
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)

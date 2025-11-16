@@ -17,23 +17,24 @@ void simulation(Volume &volume, int answer, int num_molecules,
   std::cerr << "Длина объема: " << volume.get_length_x() << "\n\n";
 
   for (int step = 0; step < total_steps; step++) {
-    if (!answer) { // init_modeling
-      if (step > total_steps - 3) {
+    if (!answer) {                  // init_modeling
+      if (step > total_steps - 3) { // last 2 coords
         space.write_coord(coord_file);
       }
-      if (step == total_steps - 1) {
+      if (step == total_steps - 1) { // last velocity
         space.write_velocity(velocity_file);
       }
     }
     if (answer) { // simulation starting from init modeling
       space.write_coord_abs(coord_abs_file);
-      // space.write_velocity(velocity_file);
-    }
-    if (step % snapshot == 0) {
-      std::cerr << "Шаг " << step << ":\n";
-      space.write_velocity(velocity_file);
+      if (step % snapshot == 0) {
+        space.write_velocity(velocity_file);
+      }
     }
 
+    if (step % snapshot == 0) {
+      std::cerr << "Шаг " << step << ":\n";
+    }
     auto force = volume.calculate_force();
     auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
     if (step % snapshot == 0) {
