@@ -3,6 +3,7 @@
 
 #include "space.hpp"
 #include <iostream>
+#include <random>
 
 class Volume {
 private:
@@ -74,12 +75,11 @@ private:
   }
 
   void init_velocity(int seed) {
-    std::srand(seed);
+    std::mt19937 gen(seed); // Лучший генератор случайных чисел
+    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+
     for (int i = 0; i < space.get_amount_of_molecules(); i++) {
-      std::array<double, 3> velocity = {
-          static_cast<double>(std::rand()) / RAND_MAX - 0.5,
-          static_cast<double>(std::rand()) / RAND_MAX - 0.5,
-          static_cast<double>(std::rand()) / RAND_MAX - 0.5};
+      std::array<double, 3> velocity = {dist(gen), dist(gen), dist(gen)};
       space.get_molecule(i).set_velocity(velocity);
     }
   }
@@ -179,6 +179,7 @@ public:
     space.set_velocity(f_vel);
     space.set_coordinate(f_coord);
     init_density(density_SI);
+    space.rescale_velocity(temperature);
     // space.remove_total_momentum(temperature);
   }
 

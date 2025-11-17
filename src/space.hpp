@@ -49,21 +49,46 @@ public:
     molecules = new_molecules;
   };
 
-  void rescale_velocity(std::array<double, 3> total_vel, double temperature) {
-    std::array<double, 3> total_vel_2 = {total_vel[0] * total_vel[0],
-                                         total_vel[1] * total_vel[1],
-                                         total_vel[2] * total_vel[2]};
-    std::array<double, 3> rescale_coef{std::sqrt(temperature / total_vel_2[0]),
-                                       std::sqrt(temperature / total_vel_2[1]),
-                                       std::sqrt(temperature / total_vel_2[2])};
+  void rescale_velocity(double target_temperature) {
+    int num_molecules = molecules.size();
 
-    for (int i = 0; i < molecules.size(); i++) {
+    double current_kinetic_energy = 0.0;
+    std::array<double, 3> total_momentum = {0, 0, 0};
+
+    for (int i = 0; i < num_molecules; i++) {
       Molecule &mol = molecules[i];
-      std::array<double, 3> coordinates_prev;
+      std::array<double, 3> vel = mol.get_velocity();
+
+      for (int j = 0; j < 3; j++) {
+        current_kinetic_energy +=
+            0.5 * vel[j] * vel[j]; // E_kin = 1/2 * m * v^2 (m=1)
+        total_momentum[j] += vel[j];
+      }
+    }
+
+    // 2. Убираем общий импульс (скорость центра масс)
+    for (int j = 0; j < 3; j++) {
+      total_momentum[j] /= num_molecules;
+    }
+
+    // T = (2/3) * E_kin / N
+    double current_temperature =
+        (2.0 / 3.0) * current_kinetic_energy / num_molecules;
+
+    double rescale_factor = 1.0;
+    if (current_temperature > 0) {
+      rescale_factor = std::sqrt(target_temperature / current_temperature);
+    }
+
+    for (int i = 0; i < num_molecules; i++) {
+      Molecule &mol = molecules[i];
       std::array<double, 3> coordinates = mol.get_coordinate();
       std::array<double, 3> vel = mol.get_velocity();
+      std::array<double, 3> coordinates_prev;
+
       for (int j = 0; j < 3; j++) {
-        vel[j] = (vel[j] - total_vel[j]) * rescale_coef[j];
+        vel[j] = (vel[j] - total_momentum[j]) * rescale_factor;
+
         coordinates_prev[j] = coordinates[j] - vel[j] * dt;
       }
 
@@ -87,10 +112,7 @@ public:
       }
     }
 
-    for (int i = 0; i < 3; i++) {
-      total_velocity[i] /= num_mol;
-    }
-    rescale_velocity(total_velocity, temperature);
+    rescale_velocity(temperature);
   }
 
   void set_velocity(const std::string file) {
