@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import json
-from scipy.optimize import curve_fit
 from scipy import stats
 
 with open("cfg/cfg.json", "r") as f:
@@ -9,114 +8,117 @@ with open("cfg/cfg.json", "r") as f:
     coord_abs_file = cfg["coord_abs_file"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
-    snapshot = cfg["snapshot"]
-    dt = cfg["dt"]
+    dt = cfg["dt"]  # шаг по времени в безразмерных единицах
 
+# Загрузка и подготовка данных
 coord_data = np.loadtxt(coord_abs_file)
-T = len(coord_data)  # num of time points
-print(f"Number of points: {T}")
+T = len(coord_data)  # количество временных точек
+print(f"Number of time points: {T}")
+print(f"Number of molecules: {num_molecules}")
+
+# Преобразование в траектории: [время, молекула, координаты]
 trajectory = coord_data.reshape(T, num_molecules, 3)
 
-print("Enter window size and step size:")
+# Параметры анализа
 window_size = int(input("Window size: "))  
 step_size = int(input("Step size: "))
 cut_index = int(input("Cut first points: "))
 
-print(f"Analysis of trajectory with {T} time points and {num_molecules} molecules.")
-print(f"Window size: {window_size} points ({window_size * 100 / T}% out of points)")
-print(f"Window step size: {step_size} points ({step_size * 100 / window_size}% out of window size)")
+# Проверка корректности параметров
+if window_size > T:
+    raise ValueError(f"Window size ({window_size}) cannot be larger than total steps ({T})")
+if cut_index >= window_size:
+    raise ValueError(f"Cut index ({cut_index}) must be less than window size ({window_size})")
 
-def compute_msd_in_window(window_trajectory):
+print(f"\nAnalysis parameters:")
+print(f"Window size: {window_size} points")
+print(f"Window step: {step_size} points") 
+print(f"Cut first {cut_index} points")
+
+def compute_msd_optimized(trajectory, window_size, step_size):
     """
-    Вычисляет MSD для временного окна траектории
-    window_trajectory: массив формы (window_size, num_molecules, 3)
-    Возвращает: массив MSD для каждого временного лага в окне
+    Оптимизированное вычисление MSD с скользящим окном
     """
-    window_length = window_trajectory.shape[0]
-    msd = np.zeros(window_length)
+    T, N, dim = trajectory.shape
+    num_windows = (T - window_size) // step_size + 1
     
-    for tau in range(window_length):
-        if tau == 0:
-            msd[tau] = 0.0  
-        else:
-            displacements = window_trajectory[tau, :, :] - window_trajectory[0, :, :]
-            msd[tau] = np.mean(displacements**2)
-
-    return msd
-
-msd_results = []
-for start_idx in range(0, T - window_size + 1, step_size):
-    end_idx = start_idx + window_size
+    msd_results = np.zeros((num_windows, window_size))
     
-    window_traj = trajectory[start_idx:end_idx]
-    window_msd = compute_msd_in_window(window_traj)
-    msd_results.append(window_msd)
+    for window_idx in range(num_windows):
+        start = window_idx * step_size
+        end = start + window_size
+        window_traj = trajectory[start:end]  # [window_size, N, 3]
+        
+        # Вычисляем MSD для всех временных лагов в окне
+        for tau in range(window_size):
+            if tau == 0:
+                msd_results[window_idx, tau] = 0.0
+            else:
+                # Смещение за время tau
+                displacements = window_traj[tau] - window_traj[0]
+                # MSD = средний квадрат смещения
+                msd_results[window_idx, tau] = np.mean(displacements**2)
+        
+        if (window_idx + 1) % max(1, num_windows // 10) == 0:
+            print(f"Processed {window_idx + 1}/{num_windows} windows")
     
-    if (start_idx // (T - window_size + 1)) % 100 == 0:
-        print(f"Completed: {start_idx/(T - window_size + 1) * 100:.1f}%")
+    return msd_results
 
-msd_results = np.array(msd_results)
-print(f"MSD results shape: {msd_results.shape}")
+# Вычисляем MSD
+print("\nComputing MSD...")
+msd_results = compute_msd_optimized(trajectory, window_size, step_size)
 
-average_msd_per_tau = np.mean(msd_results, axis=0)
+# Усредняем по всем окнам
+average_msd = np.mean(msd_results, axis=0)
 
-# Обрезаем начальные точки
-average_msd_per_tau = average_msd_per_tau[cut_index:]
-tau = np.arange(cut_index, window_size)
+# Обрезаем начальные точки и создаем массив времен
+tau = np.arange(window_size) * dt  # переводим шаги в безразмерное время
+average_msd_cut = average_msd[cut_index:]
+tau_cut = tau[cut_index:]
 
-print(f"Average MSD per tau shape: {average_msd_per_tau.shape}")
+print(f"\nMSD results shape: {msd_results.shape}")
+print(f"Final MSD array size: {len(average_msd_cut)}")
 
-print("\nMSD for first 10 time lags after cut (averaged over all windows):")
-for i, tau_val in enumerate(tau[:10]):
-    print(f"tau = {tau_val}: MSD = {average_msd_per_tau[i]:.6f}")
+# Линейная регрессия для определения коэффициента диффузии
+slope, intercept, r_value, p_value, std_err = stats.linregress(tau_cut, average_msd_cut)
+D = slope / 6.0  # для 3D: MSD = 6Dt
 
-# КОРРЕКТНЫЙ РАСЧЕТ КОЭФФИЦИЕНТА ДИФФУЗИИ
-# Линейная регрессия для MSD(tau)
-slope, intercept, r_value, p_value, std_err = stats.linregress(tau, average_msd_per_tau)
-D_from_slope = slope / 6  # Коэффициент диффузии из наклона (для 3D: MSD = 6Dt)
+print("\n" + "="*50)
+print("RESULTS:")
+print("="*50)
+print(f"Diffusion coefficient D = {D:.6e}")
+print(f"Slope = {slope:.6f}")
+print(f"R² = {r_value**2:.6f}")
+print(f"Standard error = {std_err:.6e}")
 
-# Теоретическая MSD на основе линейной регрессии
-theoretical_msd = intercept + slope * np.array(tau)
+# Визуализация
+plt.figure(figsize=(10, 6))
 
-# Старый метод для сравнения (менее точный)
-avg_D_old = average_msd_per_tau / (6 * tau)
-std_D_old = avg_D_old.std()
-calculated_D_old = avg_D_old.mean()
+# Экспериментальные данные
+plt.plot(tau_cut, average_msd_cut, 'bo', alpha=0.6, markersize=3, label='MSD data')
 
-print("\n=== РЕЗУЛЬТАТЫ ===")
-print(f"Коэффициент диффузии из усреднения (старый метод): {calculated_D_old:.4e} ± {std_D_old:.4e}")
-print(f"Коэффициент диффузии из наклона MSD (корректный): {D_from_slope:.4e}")
-print(f"Коэффициент детерминации R²: {r_value**2:.4f}")
-print(f"Относительная погрешность (старый метод): {std_D_old/calculated_D_old*100:.5f}%")
+# Линейная аппроксимация
+fit_line = intercept + slope * tau_cut
+plt.plot(tau_cut, fit_line, 'r-', linewidth=2, 
+         label=f'Linear fit: MSD = {slope:.4f}t + {intercept:.4f}')
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+plt.xlabel('Time (reduced units)')
+plt.ylabel('MSD (reduced units)')
+plt.title(f'Mean Squared Displacement\nD = {D:.4e}, R² = {r_value**2:.4f}')
+plt.legend()
+plt.grid(True, alpha=0.3)
 
-# График 1: Распределение коэффициентов диффузии
-weights = [x/sum(avg_D_old) for x in avg_D_old]
-ax1.hist(avg_D_old, bins=20, alpha=0.7, edgecolor='black', weights=weights)
-ax1.axvline(calculated_D_old, color='r', linestyle='--', label=f'Среднее: {calculated_D_old:.4e}')
-ax1.axvline(D_from_slope, color='g', linestyle='-', label=f'Из наклона: {D_from_slope:.4e}')
-ax1.set_xlabel('Коэффициент диффузии')
-ax1.set_ylabel('Частота')
-ax1.set_title('Распределение коэффициентов диффузии (старый метод)')
-ax1.legend()
-ax1.grid(True, alpha=0.3)
-
-# График 2: MSD vs tau с правильным расчетом наклона
-ax2.plot(tau, average_msd_per_tau, 'o', alpha=0.7, label='Экспериментальные данные')
-ax2.plot(tau, theoretical_msd, 'r-', linewidth=2, 
-         label=f'Линейная аппроксимация (D={D_from_slope:.2e})')
-ax2.set_xlabel('Количество шагов (τ)')
-ax2.set_ylabel('MSD')
-ax2.set_title('Зависимость MSD от времени')
-ax2.grid(True, alpha=0.3)
-ax2.legend()
+# Добавляем текст с результатами в углу графика
+textstr = f'D = {D:.4e}\nR² = {r_value**2:.4f}\nN = {num_molecules}'
+props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12,
+         verticalalignment='top', bbox=props)
 
 plt.tight_layout()
+plt.savefig('msd_analysis.png', dpi=300)
 plt.show()
 
-print(f"\n=== ДЕТАЛИ АППРОКСИМАЦИИ ===")
-print(f"Наклон (slope): {slope:.6f}")
-print(f"Пересечение (intercept): {intercept:.6f}")
-print(f"Стандартная ошибка наклона: {std_err:.6f}")
-print(f"p-value: {p_value:.6f}")
+# Дополнительная информация
+print("\nAdditional information:")
+print(f"Time range analyzed: {tau_cut[0]:.3f} to {tau_cut[-1]:.3f} (reduced units)")
+print(f"MSD range: {average_msd_cut[0]:.3f} to {average_msd_cut[-1]:.3f} (reduced units)")
