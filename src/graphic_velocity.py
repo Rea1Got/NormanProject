@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
-NUM_BARS = 40  # number of points on plot
-EXCLUDE_LAST = 20  # exclude last EXCLUDE_LAST points
+NUM_BARS = 50  # number of points on plot
+EXCLUDE_LAST = 10  # exclude last EXCLUDE_LAST points
 
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
@@ -42,7 +42,7 @@ for i in range(len(velocity)):
 
 all_squared = np.concatenate(vel_coord_2)
 vel_np = np.array(velocity)
-v2_mean = vel_np.mean()**2
+v2_mean = np.mean(vel_np**2)
 
 total_max = max(vel_coord_max_2)
 bin_edges = np.linspace(0, total_max, NUM_BARS + 1)
@@ -136,6 +136,23 @@ axs[1].grid(True)
 fig.suptitle('Распределения скоростей молекул', fontsize=16)
 plt.savefig('velocity_plot.png')
 plt.show()
+
+
+# Проверка стабильности температуры по шагам
+temperatures_per_step = []
+for i in range(data_generated.shape[0]):
+    v2_step = np.sum(data_generated[i]**2) / num_molecules
+    temperatures_per_step.append(v2_step / 3)
+
+plt.plot(temperatures_per_step)
+plt.ylabel('T*')
+plt.xlabel('Шаг')
+plt.title('Стабильность температуры')
+plt.show()
+
+# Проверка средней скорости (должна быть ~0)
+avg_velocity = np.mean(data_generated, axis=1)
+print(f"Средняя скорость системы: {np.mean(avg_velocity):.6e}")
 ########################################################################## 
 # print('Clear file ' + file_data + ': y/n?')
 # if (input().lower() == 'y'):
