@@ -6,38 +6,37 @@ from scipy import stats
 with open("cfg/cfg.json", "r") as f:
     cfg = json.load(f)
     coord_abs_file = cfg["coord_abs_file"]
+    velocity_data = cfg["velocity_file"]
     num_molecules = cfg["num_molecules"]
     total_steps = cfg["total_steps"]
     dt = cfg["dt"]  # шаг по времени в безразмерных единицах
+    density = cfg["density"]
 
-# Загрузка и подготовка данных
 coord_data = np.loadtxt(coord_abs_file)
+velocity_data = np.loadtxt(velocity_data)
+T_v = len(velocity_data)
 T = len(coord_data)  # количество временных точек
 print(f"Number of time points: {T}")
 print(f"Number of molecules: {num_molecules}")
 
-# Преобразование в траектории: [время, молекула, координаты]
 trajectory = coord_data.reshape(T, num_molecules, 3)
 
-# Параметры анализа
+velocity_coord = velocity_data.reshape(T_v, num_molecules, 3)
+speed = np.linalg.norm(velocity_coord, axis=2)  # (T_v, num_molecules)
+velocity_mean = np.mean(speed)
+
 window_size = int(input("Window size: "))  
 step_size = int(input("Step size: "))
 cut_index = int(input("Cut first points: "))
-
-# Проверка корректности параметров
-if window_size > T:
-    raise ValueError(f"Window size ({window_size}) cannot be larger than total steps ({T})")
-if cut_index >= window_size:
-    raise ValueError(f"Cut index ({cut_index}) must be less than window size ({window_size})")
 
 print(f"\nAnalysis parameters:")
 print(f"Window size: {window_size} points")
 print(f"Window step: {step_size} points") 
 print(f"Cut first {cut_index} points")
 
-def compute_msd_optimized(trajectory, window_size, step_size):
+def compute_msd(trajectory, window_size, step_size):
     """
-    Оптимизированное вычисление MSD с скользящим окном
+    Вычисление MSD с скользящим окном
     """
     T, N, dim = trajectory.shape
     num_windows = (T - window_size) // step_size + 1
@@ -54,9 +53,7 @@ def compute_msd_optimized(trajectory, window_size, step_size):
             if tau == 0:
                 msd_results[window_idx, tau] = 0.0
             else:
-                # Смещение за время tau
                 displacements = window_traj[tau] - window_traj[0]
-                # MSD = средний квадрат смещения
                 msd_results[window_idx, tau] = np.mean(displacements**2)
         
         if (window_idx + 1) % max(1, num_windows // 10) == 0:
@@ -66,7 +63,7 @@ def compute_msd_optimized(trajectory, window_size, step_size):
 
 # Вычисляем MSD
 print("\nComputing MSD...")
-msd_results = compute_msd_optimized(trajectory, window_size, step_size)
+msd_results = compute_msd(trajectory, window_size, step_size)
 
 # Усредняем по всем окнам
 average_msd = np.mean(msd_results, axis=0)
@@ -82,33 +79,31 @@ print(f"Final MSD array size: {len(average_msd_cut)}")
 # Линейная регрессия для определения коэффициента диффузии
 slope, intercept, r_value, p_value, std_err = stats.linregress(tau_cut, average_msd_cut)
 D = slope / 6.0  # для 3D: MSD = 6Dt
+mean_free_path = 3 * D / velocity_mean
 
 print("\n" + "="*50)
 print("RESULTS:")
 print("="*50)
 print(f"Diffusion coefficient D = {D:.6e}")
 print(f"Slope = {slope:.6f}")
-print(f"R² = {r_value**2:.6f}")
 print(f"Standard error = {std_err:.6e}")
+print(f"Mean free path = {mean_free_path:.6f}")
+print(f"Cross section = {1/(mean_free_path * density * np.sqrt(2)):.4f}")
+# print(f"R² = {r_value**2:.6f}")
 
-# Визуализация
 plt.figure(figsize=(10, 6))
-
-# Экспериментальные данные
 plt.plot(tau_cut, average_msd_cut, 'bo', alpha=0.6, markersize=3, label='MSD data')
 
-# Линейная аппроксимация
 fit_line = intercept + slope * tau_cut
 plt.plot(tau_cut, fit_line, 'r-', linewidth=2, 
          label=f'Linear fit: MSD = {slope:.4f}t + {intercept:.4f}')
 
 plt.xlabel('Time (reduced units)')
 plt.ylabel('MSD (reduced units)')
-plt.title(f'Mean Squared Displacement\nD = {D:.4e}, R² = {r_value**2:.4f}')
+# plt.title(f'Mean Squared Displacement\nD = {D:.4e}, R² = {r_value**2:.4f}')
 plt.legend()
 plt.grid(True, alpha=0.3)
 
-# Добавляем текст с результатами в углу графика
 textstr = f'D = {D:.4e}\nR² = {r_value**2:.4f}\nN = {num_molecules}'
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
 plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12,
@@ -118,7 +113,6 @@ plt.tight_layout()
 plt.savefig('msd_analysis.png', dpi=300)
 plt.show()
 
-# Дополнительная информация
 print("\nAdditional information:")
 print(f"Time range analyzed: {tau_cut[0]:.3f} to {tau_cut[-1]:.3f} (reduced units)")
 print(f"MSD range: {average_msd_cut[0]:.3f} to {average_msd_cut[-1]:.3f} (reduced units)")
