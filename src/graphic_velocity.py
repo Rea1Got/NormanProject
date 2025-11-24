@@ -74,26 +74,7 @@ print(f"R² = {r_squared:.6f}\n")
 print(f"Средний квадрат скорости = {v2_mean:.6f}")
 print(f"Температура через энергию = {v2_mean/3:.6f}")
 print(f"Температура через аппроксимации = {-1/(2*k):.6f}")
-# error_pct = abs(k_B_corrected - BOLTZMANN) / BOLTZMANN * 100
-# print(f"Погрешность: {error_pct:.6f}%")
-########################################################################## 
 
-# kinetic_energy_per_step = []
-# for i in range(len(data_generated)):
-#     step_energy = 0.5 * np.sum(data_generated[i]**2)
-#     kinetic_energy_per_step.append(step_energy)
-#
-# plt.figure(figsize=(12, 6))
-# plt.plot(kinetic_energy_per_step)
-# plt.xlabel('Номер шага')
-# plt.ylabel('Кинетическая энергия системы')
-# plt.title('Эволюция кинетической энергии')
-# # plt.legend()
-# plt.grid(True)
-# plt.savefig('energy_evolution.png')
-# plt.show()
-#
-########################################################################## 
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 10))
 plt.subplots_adjust(hspace=0.4)  
 

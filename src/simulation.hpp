@@ -29,15 +29,14 @@ void simulation(Volume &volume, int answer, int num_molecules,
       space.write_coord_abs(coord_abs_file);
       if (step % snapshot == 0) {
         space.write_velocity(velocity_file);
+        space.write_coord(coord_file);
       }
     }
 
-    if (step % snapshot == 0) {
-      std::cerr << "Шаг " << step << ":\n";
-    }
     auto force = volume.calculate_force();
     auto [avg_kinetic, total_energy] = volume.integrate_verle(force, dt);
-    if (step % snapshot == 0) {
+    if (step % 1000 == 0) {
+      std::cerr << "Шаг " << step << ":\n";
       std::cerr << "  Средняя кинетическая энергия: " << avg_kinetic << "\n";
       std::cerr << "  Полная энергия: " << total_energy << "\n\n";
     }

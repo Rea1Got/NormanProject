@@ -66,7 +66,6 @@ public:
       }
     }
 
-    // 2. Убираем общий импульс (скорость центра масс)
     for (int j = 0; j < 3; j++) {
       total_momentum[j] /= num_molecules;
     }
