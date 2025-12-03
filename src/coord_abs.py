@@ -112,6 +112,49 @@ plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12,
 plt.tight_layout()
 plt.savefig('msd_analysis.png', dpi=300)
 plt.show()
+#############################################################################
+
+plt.figure(figsize=(10, 6))
+plt.loglog(tau[1:], average_msd[1:], 'bo', alpha=0.6, markersize=3, label='MSD data')
+
+x_fit = np.logspace(np.log10(tau[1:].min()), np.log10(tau[1:].max()), 100)
+y_fit_diffusive = 6 * D * x_fit  # MSD = 6Dt
+plt.plot(x_fit, y_fit_diffusive, 'r--', linewidth=2, 
+         label=f'Diffusive slope (MSD ~ t)')
+
+first_point_scale = average_msd[1] / (tau[1]**2)
+y_fit_ballistic = first_point_scale * x_fit**2
+plt.plot(x_fit, y_fit_ballistic, 'g--', linewidth=2, 
+         label='Ballistic slope (MSD ~ t²)')
+
+plt.xlabel('Time (reduced units)')
+plt.ylabel('MSD (reduced units)')
+plt.title('Mean Squared Displacement (Log-Log Scale)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+textstr = f'D = {D:.4e}'
+props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12,
+         verticalalignment='top', bbox=props)
+
+t_intersect_analytic = 6 * D / first_point_scale
+if t_intersect_analytic >= x_fit.min() and t_intersect_analytic <= x_fit.max():
+    t_intersect = t_intersect_analytic
+    msd_intersect = 6 * D * t_intersect  # или a_ballistic * t_intersect**2
+    
+    print(f"\n=== Point of cross ===")
+    print(f"Time of intersection: {t_intersect:.6f} ")
+    print(f"MSD in point of intersection: {msd_intersect:.6f} ")
+    print(f"Mean free path (from intersection) = {velocity_mean * t_intersect:.6f}")
+    
+    plt.plot(t_intersect, msd_intersect, 'ro', markersize=8, label='Intersection point')
+
+plt.tight_layout()
+plt.savefig('msd_analysis_log_log.png', dpi=300)
+plt.show()
+
+#############################################################################
 
 print("\nAdditional information:")
 print(f"Time range analyzed: {tau_cut[0]:.3f} to {tau_cut[-1]:.3f} (reduced units)")
